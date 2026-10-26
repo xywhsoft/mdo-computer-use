@@ -16,8 +16,9 @@ from .driver import LOCK, verify
 class NativeTransport:
     """Test-only harness in this checkout's existing native host executable."""
 
-    def __init__(self, grant_existing_profile=False):
+    def __init__(self, grant_existing_profile=False, environment=None):
         self.grant_existing_profile = grant_existing_profile
+        self.environment = environment or {}
 
     def __enter__(self):
         driver = verify(STATE / "cua" / LOCK["version"])
@@ -27,6 +28,7 @@ class NativeTransport:
                              "devlang": "c", "devfile": "tests/fixtures/computer-use-transport.c"}}]})
         self.capture = STATE / "native-transport-last.png"
         env = dict(os.environ, MDO_CUA_DRIVER=str(driver), MDO_CUA_CAPTURE=str(self.capture))
+        env.update(self.environment)
         env.pop("MDO_CUA_TEST_GRANT", None)
         if self.grant_existing_profile:
             env["MDO_CUA_TEST_GRANT"] = "1"
@@ -42,18 +44,18 @@ class NativeTransport:
             self.__exit__(None, None, None)
             raise
 
-    def read(self, prefix):
+    def read(self, prefix, *, private=False):
         for line in self.process.stdout:
-            self.log.write(line)
+            self.log.write("[private result omitted]\n" if private else line)
             self.log.flush()
             if line.startswith(prefix):
                 return json.loads(line[len(prefix):])
         raise RuntimeError("Native transport harness exited; inspect native-transport.log")
 
-    def call(self, tool: str, arguments: dict, *, require_success=True) -> dict:
+    def call(self, tool: str, arguments: dict, *, require_success=True, private=False) -> dict:
         self.process.stdin.write(tool + "\n" + json.dumps(arguments, ensure_ascii=False) + "\n")
         self.process.stdin.flush()
-        result = self.read("native_result=")
+        result = self.read("native_result=", private=private)
         text = result["content"]
         if "structured_content: " in text:
             result["structured"] = json.JSONDecoder().raw_decode(text.split("structured_content: ", 1)[1])[0]

@@ -10,6 +10,11 @@ button, select { font: inherit; padding: 8px; }
 #scroller { height: 140px; overflow: auto; border: 1px solid #aaa; padding: 8px; }
 #status { background: #def; padding: 12px; }
 </style>
+<section aria-label="Additional tool checks" style="font-size:12px">
+<input id="upload" aria-label="Upload test file" type="file">
+<a id="download" href="/download" download="mdo-cua-check.txt">Download test file</a>
+<button id="prompt">Test page prompt</button>
+</section>
 <h1>MDO Computer Use 浏览器验收</h1>
 <p>Project-local disposable test page.</p>
 <label>消息 Message <input id="message" aria-label="消息 Message" type="text"></label>
@@ -41,6 +46,19 @@ scroller.onscroll = publish;
 document.getElementById('apply').onclick = () => {
   state.clicks++; document.getElementById('status').textContent = 'Applied: ' + state.clicks;
   publish();
+};
+document.getElementById('upload').onchange = async event => {
+  const file = event.target.files[0];
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  state.uploaded_sha256 = [...new Uint8Array(digest)].map(x => x.toString(16).padStart(2, '0')).join('');
+  state.uploaded_name = file.name;
+  publish();
+};
+document.getElementById('prompt').onclick = () => {
+  setTimeout(() => {
+    state.dialog_text = window.prompt('MDO owned page prompt', '');
+    publish();
+  }, 3000);
 };
 publish();
 </script>

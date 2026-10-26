@@ -60,8 +60,9 @@ def configuration(port: int, headless: bool) -> dict:
 class Application:
     """One project-local application process, with explicit ownership and cleanup."""
 
-    def __init__(self, port: int = 5391, headless: bool = True):
+    def __init__(self, port: int = 5391, headless: bool = True, environment=None):
         self.port, self.headless = port, headless
+        self.environment = environment or {}
         self.process: subprocess.Popen | None = None
         self.log = None
 
@@ -76,6 +77,7 @@ class Application:
         write_json(ROOT / "xs.json", configuration(self.port, self.headless))
         self.log = (STATE / "mdo.log").open("wb")
         env = dict(os.environ)
+        env.update(self.environment)
         if self.headless:
             env["USE_WEBVIEW"] = "0"
         try:
@@ -155,6 +157,11 @@ def main() -> int:
     commands.add_parser("probe", help="Verify real mdo/Cua discovery and disconnect")
     commands.add_parser("install-template", help="Import the public template through the native mdo API")
     commands.add_parser("verify-template", help="Verify native template connection creation and removal")
+    addons_parser = commands.add_parser("addons", help="Inspect or install pinned optional local dependencies")
+    addons_parser.add_argument("--install", action="store_true")
+    tools_parser = commands.add_parser("tool-check", help="Run per-tool native acceptance on owned fixtures")
+    tools_parser.add_argument("--addons", action="store_true")
+    tools_parser.add_argument("--scope", choices=("desktop", "browser", "all"), default="all")
     acceptance_parser = commands.add_parser("acceptance", help="Run the real account model on the project test window")
     acceptance_parser.add_argument("--model", default="ornith-1.5-35b")
     acceptance_parser.add_argument("--timeout", type=int, default=300)
@@ -167,6 +174,8 @@ def main() -> int:
         command = commands.add_parser(name)
         command.add_argument("--port", type=int, default=5391)
         command.add_argument("--headless", action="store_true")
+        command.add_argument("--addons", action="store_true",
+            help="Use the explicitly installed project-local FFmpeg and perception extension")
     args = parser.parse_args()
     try:
         if args.command == "deploy":
@@ -174,6 +183,22 @@ def main() -> int:
         elif args.command == "build":
             from .build import build
             print(build(args.xserver_repository))
+        elif args.command == "addons":
+            from .addons import FFMPEG, PERCEPTION, install
+            print(json.dumps(install() if args.install else {"ffmpeg": FFMPEG, "perception": PERCEPTION},
+                             ensure_ascii=False, indent=2))
+        elif args.command == "tool-check":
+            from .coverage import desktop, browser, summarize
+            from .addons import environment
+            env = environment() if args.addons else None
+            reports = {}
+            if args.scope in ("desktop", "all"):
+                reports["desktop"] = desktop(env)
+            if args.scope in ("browser", "all"):
+                reports["browser"] = browser(env)
+            result = summarize(reports)
+            print(json.dumps({k: result[k] for k in ("passed", "tools", "functional")}, indent=2))
+            return 0 if result["passed"] else 1
         elif args.command == "acceptance":
             from .acceptance import run, summary
             if args.scope == "browser":
@@ -231,7 +256,11 @@ def main() -> int:
         else:
             if not 1 <= args.port <= 65535:
                 raise ValueError("port must be between 1 and 65535")
-            with Application(args.port, args.command == "smoke" or args.headless) as app:
+            environment = None
+            if args.addons:
+                from .addons import environment as addon_environment
+                environment = addon_environment()
+            with Application(args.port, args.command == "smoke" or args.headless, environment) as app:
                 state = app.ready()
                 if args.command == "smoke":
                     result = {"ready": state["ready"], "stage": state["stage"],
