@@ -314,3 +314,7 @@ Responses 工具 strict 值按定义显式传递后，使用同一完整任务�
 ### 2026-10-27 大型 MCP 状态输出
 
 完整浏览器复测已导航至验收页，随后 native session 因单条结果超限中止。复现证实：工具先保存 typed JSON 附件后，会绕过原有 12 KiB inline spill；浏览器状态 31577 字节超过会话 16 KiB 上限。现对已有附件同样执行 inline 预算，复用原附件供分页读取，保留图片，不重复保存。原生回归验证 40 KB 结果压至 279 字节并可追加会话，纯文本/带图片均通过；既有目录生命周期和 Responses 回归继续通过。此修复属于 mdo SDK 输出接入，Cua 保持不变。
+
+### 2026-10-27 服务发现元数据
+
+完整浏览器任务的一次独立复测未进入 Cua：模型搜索 browser / computer use 时，原描述仅 Cua Driver desktop automation，与任一检索词都不匹配。native tool_search 按服务 ID/description 搜索，并不搜索展示 name。现将插件 description 补全为准确中英文能力说明（Computer Use / browser / 浏览器等），模板版本 0.1.2；仅改服务元数据，无行为提示、Skill 或重试策略。保留未完成会话证据。

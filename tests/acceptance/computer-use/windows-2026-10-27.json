@@ -58,5 +58,12 @@
     "run_id": "run-V--u87gZ3sLmDXW9nAf9LLPWmfoOxurs",
     "error_code": "context",
     "reason": "persisted 31577-byte typed MCP text bypassed inline spill and exceeded the native session 16384-byte tool-result cap"
+  },
+  "browser_discovery_before_summary_update": {
+    "passed": false,
+    "elapsed_seconds": 192.69,
+    "session_id": "V--u87gmHo55Ex3QJ10uGfXK4cohEjBl",
+    "run_id": "run-V--u87gmIHU9FyDfE4jGxkxiUo0r0xoq",
+    "reason": "Stopped after Computer Use/browser searches returned no summary match. MCP indexes server id and description; old description contained neither query."
   }
 }

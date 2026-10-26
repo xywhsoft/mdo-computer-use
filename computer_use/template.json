@@ -30,7 +30,7 @@
       "config": {
         "schema_version": 1,
         "name": "Computer Use",
-        "description": "Cua Driver desktop automation.",
+        "description": "Computer Use：通过 Cua Driver 控制本机桌面和 Chromium 浏览器（browser）。提供截图、窗口、鼠标键盘、控件、剪贴板、录屏及可选视觉解析。",
         "transport": {
           "type": "stdio",
           "program": {
@@ -75,7 +75,7 @@
       "config": {
         "schema_version": 1,
         "name": "Computer Use",
-        "description": "Cua Driver desktop automation.",
+        "description": "Computer Use：通过 Cua Driver 控制本机桌面和 Chromium 浏览器（browser）。提供截图、窗口、鼠标键盘、控件、剪贴板、录屏及可选视觉解析。",
         "transport": {
           "type": "stdio",
           "program": {
