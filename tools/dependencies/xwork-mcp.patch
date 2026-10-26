@@ -1287,7 +1287,7 @@
          } else {
              size_t iJson = 0u;
              char* sJson = tBlock ? xrtJsonStringify(tBlock, NULL, &iJson) : NULL;
-@@ -2290,6 +2756,18 @@
+@@ -2290,6 +2756,22 @@
      }
      if ( !tRendered.iLen && !xwork__buf_append_cstr(&tRendered, "MCP tool returned no content") ) goto oom;
      if ( !xworkToolOutputSet(pOutput, !bIsError, tRendered.pData) ) goto oom;
@@ -1296,17 +1296,21 @@
 +        const char* sType=xwork__json_text(tBlock,"type");
 +        const char* sMime=xwork__json_text(tBlock,"mimeType");
 +        const char* sData=xwork__json_text(tBlock,"data");
-+        if(sType&&!strcmp(sType,"image")&&sMime&&sData&&strlen(sData)<=2u*1024u*1024u&&
++        /* The parsed message is already bounded by this client's configured
++         * transport limit. Do not silently discard valid high-resolution
++         * images at an unrelated 1 MiB decoded / 2 MiB encoded threshold.
++         * Agent result writers enforce their own downstream result budget. */
++        if(sType&&!strcmp(sType,"image")&&sMime&&sData&&strlen(sData)<=pClient->iMaxMessageBytes&&
 +            (!strcmp(sMime,"image/png")||!strcmp(sMime,"image/jpeg")||!strcmp(sMime,"image/webp"))) {
 +            size_t iSize=0;unsigned char* pData=xrtBase64DecodeNew(sData,strlen(sData),&iSize,NULL);
-+            if(pData&&iSize<=1024u*1024u)(void)xworkToolOutputSetImage(pOutput,pData,iSize,sMime);
-+            xrtFree(pData);break;
++            bool bCopied=!pData||xworkToolOutputSetImage(pOutput,pData,iSize,sMime);
++            xrtFree(pData);if(!bCopied)goto oom;break;
 +        }
 +    }
      eResult = XWORK_RESULT_OK;
      goto cleanup;
  
-@@ -2302,8 +2780,15 @@
+@@ -2302,8 +2784,15 @@
      if ( tArguments ) xrtValueRelease(tArguments);
      xwork__buf_unit(&tParams);
      xwork__buf_unit(&tRendered);
@@ -1322,7 +1326,7 @@
  }
  
  bool xworkMcpClientGetInfo(const xwork_mcp_client* pClient, xwork_mcp_info* pInfo)
-@@ -2357,7 +2842,11 @@
+@@ -2357,7 +2846,11 @@
          pClient->psAllowedTools, pClient->iAllowedToolCount);
      xwork__mcp_string_array_unit(
          pClient->psDeniedTools, pClient->iDeniedToolCount);
@@ -1334,7 +1338,7 @@
      free(pClient->sSummary);
      free(pClient->sProgram);
      free(pClient->sEndpoint);
-@@ -2662,6 +3151,30 @@
+@@ -2662,6 +3155,30 @@
      return sLeft == sRight || (sLeft && sRight && strcmp(sLeft, sRight) == 0);
  }
  
@@ -1365,7 +1369,7 @@
  static bool xwork__mcp_client_config_equal(
      xwork_mcp_client* pLeft, xwork_mcp_client* pRight)
  {
-@@ -3082,6 +3595,74 @@
+@@ -3082,6 +3599,74 @@
      return xwork__mcp_refresh_cache(pClient, pCancel, uDeadline, pError);
  }
  
@@ -1440,7 +1444,7 @@
  static bool xwork__mcp_prepare_lazy(xwork_mcp_client* pClient,
      bool bRefresh, const xcancel* pCancel, uint64_t uDeadline,
      xwork_error* pError)
-@@ -3094,11 +3675,7 @@
+@@ -3094,11 +3679,7 @@
              "MCP server is disabled or unavailable");
          return false;
      }
@@ -1453,7 +1457,7 @@
      bReconnectBlocked = pClient->bFailed && !pClient->bAutoReconnect &&
          !pClient->bConnected;
      xwork__mcp_unlock(pClient);
-@@ -3110,15 +3687,15 @@
+@@ -3110,15 +3691,15 @@
      if ( !xwork__mcp_connect_scoped(pClient, pCancel, uDeadline, pError) ) {
          return false;
      }
@@ -1475,7 +1479,7 @@
      xwork__mcp_unlock(pClient);
      if ( bRefresh || !bDiscovered || bSchemaExpired ) {
          return xwork__mcp_refresh_cache(pClient, pCancel, uDeadline, pError);
-@@ -3229,13 +3806,14 @@
+@@ -3229,13 +3810,14 @@
          return false;
      }
      pClient = xwork__runtime_mcp_find(pAgent->pRuntime, sServerId);
@@ -1496,7 +1500,7 @@
      for ( i = 0u; i < pClient->iToolCount; ++i ) {
          if ( strcmp(pClient->pTools[i].sRemoteName, sRemoteToolName) == 0 ) {
              pProxy = &pClient->pTools[i];
-@@ -3253,7 +3831,8 @@
+@@ -3253,7 +3835,8 @@
      tDefinition.sParametersJson = pProxy->sParametersJson;
      tDefinition.bStrict = false;
      tDefinition.uEffects = pProxy->uEffects;
@@ -1506,7 +1510,7 @@
      tDefinition.pUserData = pProxy;
      tDefinition.sSource = pClient->sToolSource;
      tDefinition.OnDescribePermissions = xwork__mcp_describe_permissions;
-@@ -3357,6 +3936,7 @@
+@@ -3357,6 +3940,7 @@
               iShown < (size_t)uLimit; ++i ) {
              pClient = pAgent->pRuntime->ppMcpServers[i];
              if ( !pClient || !pClient->bRegistered ||
@@ -1514,7 +1518,7 @@
                   xwork__atomic_load(&pClient->iEnabled) == 0 ||
                   (!xwork__ascii_contains(pClient->sServerName, sQuery) &&
                    !xwork__ascii_contains(pClient->sSummary, sQuery)) ) continue;
-@@ -3378,7 +3958,7 @@
+@@ -3378,7 +3962,7 @@
          size_t i;
          size_t iShown = 0u;
          pClient = xwork__runtime_mcp_find(pAgent->pRuntime, sServer);
@@ -1523,7 +1527,7 @@
              eResult = xworkToolOutputSet(pOutput, false,
                  "unknown MCP server id") ? XWORK_RESULT_OK : XWORK_RESULT_ERROR;
              goto cleanup;
-@@ -3388,16 +3968,26 @@
+@@ -3388,16 +3972,26 @@
                  pContext && pContext->uDeadline
                      ? pContext->uDeadline : XLLM_DEADLINE_NEVER,
                  pError) ) goto cleanup;
@@ -1555,7 +1559,7 @@
          }
          for ( i = 0u; i < pClient->iToolCount && iShown < (size_t)uLimit; ++i ) {
              xwork_mcp_tool_proxy* pTool = &pClient->pTools[i];
-@@ -3461,10 +4051,46 @@
+@@ -3461,10 +4055,46 @@
      return eResult;
  }
  
@@ -1603,7 +1607,7 @@
      size_t iRemoved = 0u;
      xworkErrorInit(pError);
      if ( !pAgent ) {
-@@ -3494,8 +4120,14 @@
+@@ -3494,8 +4124,14 @@
      arrTools[1].pUserData = pAgent;
      arrTools[1].sSource = "builtin.mcp";
      arrTools[1].OnDescribePermissions = xwork__mcp_discovery_permissions;
