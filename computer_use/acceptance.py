@@ -37,11 +37,14 @@ def wait_account(app) -> None:
 
 
 def run_task(app, report: dict, title: str, prompt: str, timeout: float) -> dict:
-    session = app.request("/api/v1/sessions", "POST", {
+    config = {
         "project_id": "default", "title": title, "agent_id": "mdo.default",
         "model_id": report["model"], "permission_profile": "full-access",
         "reasoning_effort": "medium", "max_output_tokens": 8192,
-    })["data"]
+    }
+    if report.get("protocol_requested"):
+        config["protocol"] = report["protocol_requested"]
+    session = app.request("/api/v1/sessions", "POST", config)["data"]
     sid = report["session_id"] = session["id"]
     report["user_task"] = prompt
     started = time.monotonic()
@@ -80,7 +83,7 @@ def run_task(app, report: dict, title: str, prompt: str, timeout: float) -> dict
     return active
 
 
-def run(model: str = "ornith-1.5-35b", timeout: float = 300) -> dict:
+def run(model: str = "ornith-1.5-35b", timeout: float = 300, protocol: str | None = None) -> dict:
     if os.name != "nt":
         raise RuntimeError("This desktop acceptance fixture currently validates Windows only")
     STATE.mkdir(parents=True, exist_ok=True)
@@ -89,7 +92,7 @@ def run(model: str = "ornith-1.5-35b", timeout: float = 300) -> dict:
     oracle.unlink(missing_ok=True)
     fixture = subprocess.Popen([str(binary), str(oracle)], cwd=ROOT)
     report = {"model": model, "backend": "official Cua 0.38.0 through mdo MCP",
-              "prompt_workarounds": False, "fixture_pid": fixture.pid}
+              "prompt_workarounds": False, "fixture_pid": fixture.pid, "protocol_requested": protocol}
     try:
         with Application() as app:
             app.ready()
@@ -115,7 +118,7 @@ def run(model: str = "ornith-1.5-35b", timeout: float = 300) -> dict:
         report.update(passed=False, error=str(error))
         return report
     finally:
-        write_json(STATE / "native-acceptance.json", report)
+        write_json(STATE / ("native-acceptance" + ("-" + protocol if protocol else "") + ".json"), report)
         if fixture.poll() is None:
             fixture.terminate()
             fixture.wait(timeout=5)

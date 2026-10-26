@@ -191,6 +191,23 @@ Cua may report `effect: refused` inside a successful MCP result. The tests inspe
 its structured action result and independent application state; an MCP transport
 success alone is not treated as proof that an action happened.
 
+### Stage 11 — browser model outcome and protocol-selectable acceptance
+
+The unchanged default Agent/model browser task ended with `timed_out` at
+301.16 seconds, after 30 model calls / 38 tool calls. It opened the local test
+page, encountered Cua's ordinary existing-profile authorization boundary, then
+created and exactly bound a driver-owned browser. It subsequently tried to
+address the browser's URL bar through page tools on `about:blank`; no form
+values changed. The owned browser ended on disconnect. The extra local test
+tab opened by the model was closed explicitly after checking its exact title,
+without closing the user's browser process or other tabs.
+
+`acceptance --scope browser` now records that independent oracle and compact
+session evidence. `--protocol` selects mdo's existing per-session protocol for
+explicit compatibility comparisons; it does not alter defaults or add retries.
+Separate protocol reports preserve earlier outcomes. Autonomous completion with
+the current account model is not yet established by either default-route task.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo

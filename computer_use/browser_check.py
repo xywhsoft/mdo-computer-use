@@ -123,6 +123,36 @@ def run() -> dict:
         return report
 
 
+def model_acceptance(model="ornith-1.5-35b", timeout=300, protocol=None) -> dict:
+    from .__main__ import Application
+    from .acceptance import wait_account, run_task
+    report = {"model": model, "backend": "official Cua through mdo MCP",
+              "prompt_workarounds": False, "protocol_requested": protocol}
+    try:
+        with PageServer(), Application() as app:
+            app.ready()
+            wait_account(app)
+            prompt = (f"请使用 Computer Use 打开一个临时浏览器窗口，访问验收页 {URL}。"
+                "在消息 Message 中输入“墨斗 Browser 验收”，点击 Apply 应用一次，"
+                "勾选 Enable option 启用选项，将颜色 Color 选为 Green，向下滚动 Scroll area，"
+                "最后查看页面截图并报告结果。只操作此验收页。")
+            try:
+                active = run_task(app, report, "Computer Use browser acceptance", prompt, timeout)
+                actual = report["oracle"] = json.loads(ORACLE.read_text(encoding="utf-8")) if ORACLE.exists() else {}
+                report["checks"] = {"run_succeeded": active.get("state") == "succeeded",
+                    "text": actual.get("text") == "墨斗 Browser 验收", "button_once": actual.get("clicks") == 1,
+                    "checkbox": actual.get("checked") is True, "selection": actual.get("color") == "green",
+                    "scroll": actual.get("scroll", 0) > 0, "screenshot_retained": bool(report["image_parts"])}
+                report["passed"] = all(report["checks"].values())
+            finally:
+                app.request("/api/v1/mcp/cua-driver/disconnect", "POST")
+    except (OSError, ValueError, RuntimeError) as error:
+        report.update(passed=False, error=str(error))
+    finally:
+        write_json(STATE / ("browser-acceptance" + ("-" + protocol if protocol else "") + ".json"), report)
+    return report
+
+
 if __name__ == "__main__":
     if sys.argv[1:] == ["serve"]:
         serve()
