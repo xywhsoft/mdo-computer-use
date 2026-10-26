@@ -106,6 +106,23 @@ normal user task against `tests/fixtures/computer-use-win32.c`. Its fixture is
 compiled once and reused; the app and Home remain in this checkout. A real
 model outcome is recorded separately from transport success.
 
+### Stage 5 — deterministic host lifetime regression
+
+The fresh 0.7.0 host also exits during dynamic tool loading, before Cua input.
+A model-free, Cua-free native regression now reproduces the underlying lifetime
+gap: adding a tool retires a catalog whose entries are still borrowed by the
+active execution and executor tool view. It prints
+`catalog_retired_while_borrowed owners=1` and exits deliberately before accessing
+the freed data. Run it directly in this checkout:
+
+```powershell
+python tests/test_computer_use_catalog.py
+```
+
+This is a generic mdo host integration defect, separate from the deferred Cua
+window/cancellation behavior. The required correction belongs to mdo's catalog
+ownership; the official Cua binaries and Agent instructions remain unchanged.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo
