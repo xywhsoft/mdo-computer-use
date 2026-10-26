@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -68,6 +69,9 @@ class Application:
         executable = ROOT / ("mdo.exe" if os.name == "nt" else "mdo")
         if not executable.is_file():
             raise RuntimeError("Deploy mdo first: python -m computer_use deploy --mdo PATH")
+        # Refuse an occupied port rather than accidentally validating another app.
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", self.port))
         STATE.mkdir(parents=True, exist_ok=True)
         write_json(ROOT / "xs.json", configuration(self.port, self.headless))
         self.log = (STATE / "mdo.log").open("wb")
@@ -84,8 +88,9 @@ class Application:
             self.__exit__(None, None, None)
             raise
 
-    def request(self, path: str, method: str = "GET", body: dict | None = None):
-        headers = {}
+    def request(self, path: str, method: str = "GET", body: dict | None = None,
+                headers: dict | None = None):
+        headers = dict(headers or {})
         if method not in ("GET", "HEAD", "OPTIONS"):
             with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/api/v1/bootstrap", timeout=3) as response:
                 headers["X-Mdo-Write-Token"] = response.headers["X-Mdo-Write-Token"]
@@ -126,6 +131,8 @@ class Application:
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     deploy_parser = commands.add_parser("deploy", help="Reuse one existing mdo executable")
@@ -137,6 +144,9 @@ def main() -> int:
     config_parser.add_argument("--enable", action="store_true")
     config_parser.add_argument("--replace", action="store_true")
     commands.add_parser("package", help="Build an importable mdo MCP service template")
+    commands.add_parser("probe", help="Verify real mdo/Cua discovery and disconnect")
+    commands.add_parser("install-template", help="Import the public template through the native mdo API")
+    commands.add_parser("verify-template", help="Verify native template connection creation and removal")
     for name in ("smoke", "run"):
         command = commands.add_parser(name)
         command.add_argument("--port", type=int, default=5391)
@@ -145,7 +155,7 @@ def main() -> int:
     try:
         if args.command == "deploy":
             print(json.dumps(deploy(args.mdo), indent=2))
-        elif args.command in ("driver", "configure", "package"):
+        elif args.command in ("driver", "configure", "package", "probe", "install-template", "verify-template"):
             from . import driver
             if args.command == "driver":
                 executable = driver.install(STATE, args.archive)
@@ -156,6 +166,17 @@ def main() -> int:
                 path = STATE / "computer-use.mdo-extension.json"
                 write_json(path, driver.extension_package())
                 print(path)
+            elif args.command in ("probe", "install-template", "verify-template"):
+                from .integration import probe, install_template, verify_template
+                with Application() as app:
+                    app.ready()
+                    result = {"probe": probe, "install-template": install_template,
+                              "verify-template": verify_template}[args.command](app)
+                    write_json(STATE / (args.command + ".json"), result)
+                    if args.command == "install-template":
+                        result = {"installed": result["installed"], "template_id": result["template_id"],
+                                  "receipt_key": result["item"]["receipt"]["key"]}
+                    print(json.dumps(result, ensure_ascii=False, indent=2))
             else:
                 executable = args.driver or STATE / "cua" / driver.LOCK["version"] / "cua-driver.exe"
                 config = driver.connection(executable, args.enable)

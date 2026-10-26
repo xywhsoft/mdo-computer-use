@@ -55,6 +55,30 @@ is stopped, then launch it. On Windows the binary files remain byte-identical
 to the official archive. Other platforms are not advertised as validated yet;
 their future templates can use the same MCP contract with native launch modes.
 
+### Stage 3 — actual mdo transport and installation flow
+
+`probe` has passed against the real deployed application and official driver:
+protocol `2026-07-28`, 63 discovered tools, two discovery requests, successful
+refresh operation, and explicit transport disconnect. No alternate MCP client
+or driver shim is involved. There were no remaining Cua processes after exit.
+
+`install-template` imports the package through mdo's normal plan/import API.
+`verify-template` has passed native parameter preview, creation of a disabled
+template-bound connection, and removal of that test connection. It uses the
+same project Home and executable, without changing the active Cua connection.
+
+```powershell
+python -m computer_use probe
+python -m computer_use install-template
+python -m computer_use verify-template
+```
+
+The existing mdo account is available in this development Home using its
+device-protected saved session. No plaintext token or account data is included
+in source control. The available account model currently includes
+`ornith-1.5-35b` with image and tool capabilities; actual Agent execution is the
+next milestone.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo
