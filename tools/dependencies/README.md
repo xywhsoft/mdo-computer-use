@@ -151,3 +151,8 @@ messages with no plain content were serialized as an empty string. The offline
 native test `tests/test_computer_use_responses.py` checks actual request JSON.
 This changes the generic xllm dialect in mdo's overlay; Cua is unchanged.
 Format reference: https://developers.openai.com/api/docs/guides/function-calling
+
+The Responses serializer also writes each tool's `strict` boolean explicitly.
+Omitting `false` lets Responses attempt schema normalization, which can change
+open MCP argument maps. Both strict modes and the original parameter schemas
+are now preserved by the native wire regression; no Cua schema is rewritten.

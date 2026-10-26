@@ -2856,3 +2856,16 @@
              } else if ( !xllm__json_string(pBuf, pMessage->sContent ? pMessage->sContent : "") ||
                          !xllm__buf_append_char(pBuf, '}') ) {
                  return false;
+@@ -250,8 +259,10 @@
+                  !xllm__json_string(&tBody, pTool->sDescription ? pTool->sDescription : "") ||
+                  !xllm__buf_append_cstr(&tBody, ",\"parameters\":") ||
+                  !xllm__buf_append_cstr(&tBody, sSchema) ) goto oom;
+-            if ( pTool->bStrict &&
+-                 !xllm__buf_append_cstr(&tBody, ",\"strict\":true") ) goto oom;
++            /* Omission can request server-side strict normalization. Preserve
++             * the host tool's explicit mode, including open MCP argument maps. */
++            if ( !xllm__buf_append_cstr(&tBody, pTool->bStrict ?
++                    ",\"strict\":true" : ",\"strict\":false") ) goto oom;
+             if ( !xllm__buf_append_char(&tBody, '}') ) goto oom;
+         }
+         if ( !xllm__buf_append_char(&tBody, ']') ||

@@ -276,6 +276,9 @@ maps survive serialization. This is a possible contributor to malformed batch
 arguments; a real model run is still required to establish that relationship.
 Reference: https://developers.openai.com/api/docs/guides/function-calling
 
+The generic serializer correction is now source-built and passes the explicit
+false/true wire checks as well as the earlier image and catalog regressions.
+
 Python 3.12+ is sufficient for the integration commands. Build this checkout's
 Windows product with the locked SDK, without building Android/Linux products:
 
