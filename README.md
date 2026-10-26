@@ -3,6 +3,10 @@
 > Full agent capabilities in a ~4 MB desktop app. Build, extend, and run it anywhere.
 > See [README_zh.md](README_zh.md) for the Chinese version.
 
+This branch integrates **Computer Use with the official Cua Driver**. See the
+[installation and maintenance guide](docs/computer-use.md) and
+[measured acceptance results](COMPUTER_USE.md).
+
 mdo (墨斗) is a portable Agent workbench that layers a **native C stack** —
 `xrt`, `xs`, `xllm`, `xllm-session`, and `xwork` — under a native HTML/CSS/JavaScript
 frontend. Business logic is written in C, compiled into a single TCC unity entry, and

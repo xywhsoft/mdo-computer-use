@@ -210,11 +210,11 @@ the current account model is not yet established by either default-route task.
 
 ## Local environment
 
-Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo
-executable instead of rebuilding unrelated Android/Linux products:
+Python 3.12+ is sufficient for the integration commands. Build this checkout's
+Windows product with the locked SDK, without building Android/Linux products:
 
 ```powershell
-python -m computer_use deploy --mdo D:\GIT\mdo\mdo.exe
+python -m computer_use build --xserver-repository D:\GIT\xserver
 python -m computer_use smoke
 python -m computer_use run
 ```
@@ -225,9 +225,10 @@ bounded stage results/logs live in `.build/computer-use/`. The generated root
 --headless` serves the same app on loopback without a visible window. The
 default development port is 5391.
 
-The deployment receipt records binary provenance and SHA-256. Reusing a binary
-does not claim it was rebuilt from this checkout. Normal source builds still
-use the upstream `tools/build_mdo.py` and its locked dependencies.
+The deployment receipt records commit/dirty status, dependency-lock and overlay
+hashes, plus binary SHA-256. `deploy --mdo PATH` remains available for explicitly
+reusing a version-compatible executable, but does not claim a source build.
+Normal source builds use `tools/build_mdo.py` and its locked dependencies.
 
 ## Deferred observations
 

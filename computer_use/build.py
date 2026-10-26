@@ -54,5 +54,8 @@ def build(repository: Path) -> Path:
         "path": str(binary), "sha256": sha256(binary), "bytes": binary.stat().st_size,
         "version": json.loads((ROOT / "app/release.json").read_text(encoding="utf-8"))["version_name"],
         "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+        "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()),
+        "deps_lock_sha256": sha256(ROOT / "deps.lock"),
+        "sdk_overlay_sha256": lock["sdk_overlay"]["sha256"],
     })
     return ROOT / "mdo.exe"

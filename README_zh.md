@@ -3,6 +3,10 @@
 > 仅约 4MB 即具备完整的 Agent 能力。可在任意平台构建、扩展与运行。
 > 英文版见 [README.md](README.md)。
 
+本分支开发 **Computer Use（官方 Cua Driver）**，部署和运行见
+[Computer Use 使用与维护](docs/computer-use.md)，实际验收结果见
+[阶段记录](COMPUTER_USE.md)。
+
 mdo（墨斗）是一款便携 Agent 工作台，在**原生 C 栈**（`xrt`、`xs`、`xllm`、`xllm-session`、`xwork`）
 之上叠加原生 HTML/CSS/JavaScript 前端。所有业务逻辑用 C 编写，编译为单个 TCC unity 入口，由 `xs`
 运行时托管，并在 WebView 中渲染界面。最终产物是一款轻量、自包含的桌面 / 移动 / 服务器应用，
