@@ -171,6 +171,26 @@ No model retries, corrective prompts or Cua changes were added. The harness
 now recognizes every terminal state, uses the native DELETE cancellation route,
 records bounded evidence and always disconnects its transport.
 
+### Stage 10 — deterministic native desktop and browser acceptance
+
+`python -m computer_use transport-check` passes 8 desktop checks and 10 browser
+checks. The test-only harness uses this checkout's existing native host and the
+same public xwork MCP client used by mdo; it does not reimplement the MCP codec
+or add a production control API. All 63 official tool schemas load successfully.
+This is deterministic transport/action evidence, separate from model autonomy.
+
+The Win32 oracle confirms Chinese text, one button click, checkbox, Green
+selection and one canvas pixel click; both captures return image bytes. The
+browser oracle confirms Chinese typing, one click, checkbox, Green selection and
+600 px scrolling. Exact tab binding, image capture, stale-ref refusal and ending
+the owned browser session also pass. The browser fixture runs only on loopback;
+Cua owns its disposable test profile and closes it with the session. No user
+profile is copied or changed, and no Cua processes remain after the tests.
+
+Cua may report `effect: refused` inside a successful MCP result. The tests inspect
+its structured action result and independent application state; an MCP transport
+success alone is not treated as proof that an action happened.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo

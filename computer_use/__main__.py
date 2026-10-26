@@ -156,6 +156,8 @@ def main() -> int:
     acceptance_parser = commands.add_parser("acceptance", help="Run the real account model on the project test window")
     acceptance_parser.add_argument("--model", default="ornith-1.5-35b")
     acceptance_parser.add_argument("--timeout", type=int, default=300)
+    check_parser = commands.add_parser("transport-check", help="Exercise native Cua desktop/browser actions without a model")
+    check_parser.add_argument("--scope", choices=("desktop", "browser", "all"), default="all")
     for name in ("smoke", "run"):
         command = commands.add_parser(name)
         command.add_argument("--port", type=int, default=5391)
@@ -172,6 +174,17 @@ def main() -> int:
             report = run(args.model, args.timeout)
             print(json.dumps(summary(report), ensure_ascii=False, indent=2))
             return 0 if report["passed"] else 1
+        elif args.command == "transport-check":
+            from .transport_check import desktop
+            from .browser_check import run as browser
+            reports = {}
+            if args.scope in ("desktop", "all"):
+                reports["desktop"] = desktop()
+            if args.scope in ("browser", "all"):
+                reports["browser"] = browser()
+            write_json(STATE / "transport-check.json", reports)
+            print(json.dumps(reports, ensure_ascii=False, indent=2))
+            return 0 if all(r["passed"] for r in reports.values()) else 1
         elif args.command in ("driver", "configure", "package", "probe", "install-template", "verify-template"):
             from . import driver
             if args.command == "driver":

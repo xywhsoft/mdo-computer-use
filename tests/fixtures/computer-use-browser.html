@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>MDO Computer Use Browser Acceptance</title>
+<style>
+body { font: 18px system-ui; margin: 28px; max-width: 760px; }
+label { display: block; margin: 14px 0; }
+input[type=text] { width: 90%; font: inherit; padding: 8px; }
+button, select { font: inherit; padding: 8px; }
+#scroller { height: 140px; overflow: auto; border: 1px solid #aaa; padding: 8px; }
+#status { background: #def; padding: 12px; }
+</style>
+<h1>MDO Computer Use 浏览器验收</h1>
+<p>Project-local disposable test page.</p>
+<label>消息 Message <input id="message" aria-label="消息 Message" type="text"></label>
+<button id="apply">Apply 应用</button>
+<label><input id="enabled" type="checkbox">Enable option 启用选项</label>
+<label>颜色 Color <select id="color" aria-label="颜色 Color">
+<option value="red">Red</option><option value="green">Green</option><option value="blue">Blue</option>
+</select></label>
+<p id="status">Applied: 0</p>
+<div id="scroller" tabindex="0" aria-label="Scroll area"></div>
+<script>
+const state = {text: '', clicks: 0, checked: false, color: 'red', scroll: 0};
+const input = document.getElementById('message');
+const enabled = document.getElementById('enabled');
+const color = document.getElementById('color');
+const scroller = document.getElementById('scroller');
+for (let i = 1; i <= 80; i++) {
+  const row = document.createElement('p'); row.textContent = `Row ${i} — 滚动验证`;
+  scroller.append(row);
+}
+function publish() {
+  state.text = input.value; state.checked = enabled.checked;
+  state.color = color.value; state.scroll = scroller.scrollTop;
+  fetch('/state', {method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(state)}).catch(() => {});
+}
+input.oninput = publish; enabled.onchange = publish; color.onchange = publish;
+scroller.onscroll = publish;
+document.getElementById('apply').onclick = () => {
+  state.clicks++; document.getElementById('status').textContent = 'Applied: ' + state.clicks;
+  publish();
+};
+publish();
+</script>
+</html>
