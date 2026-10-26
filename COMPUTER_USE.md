@@ -137,6 +137,15 @@ and dependency tree verification passed. The rebuilt 0.7.0 app again passes
 readiness, Cua's 63-tool discovery, template connection lifecycle and the four
 package checks. Cua's six official files still match the pinned release.
 
+### Stage 7 — reproduced missing multimodal tool output
+
+An offline native test uses the public `xllmClientBuildRequestJson` API without
+network calls or credentials. Plain text and one typed text part survive, while
+text plus image, image-only and multiple text parts become empty strings in
+Responses function outputs. Run `python tests/test_computer_use_responses.py`;
+its initial expected failure captures the exact wire defect. The real model
+test remains incomplete until this generic host serialization path is fixed.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo
