@@ -181,7 +181,33 @@
                       !xwork__buf_append_cstr(&tHookOutput, tOutput.sContent) ||
                       !xworkToolOutputSet(&tOutput, false, tHookOutput.pData) ) goto oom;
              } else if ( eHookAction == XWORK_HOOK_CANCEL ) {
-@@ -741,6 +775,7 @@
+@@ -678,7 +712,24 @@
+     }
+ tool_ready:
+     if ( sArtifact ) {
+-        sInline = xwork__strdup(tOutput.sContent ? tOutput.sContent : "");
++        /* A typed result already has a durable artifact. It still needs the
++         * same inline budget as ordinary tool output; otherwise a large MCP
++         * snapshot can exceed the session's per-result cap and abort the run.
++         * Reuse the existing artifact instead of publishing a second copy. */
++        size_t iLength = tOutput.sContent ? strlen(tOutput.sContent) : 0u;
++        if ( iLength > pAgent->iMaxInlineToolBytes ) {
++            xwork_buf tIndex = {0};
++            char* sLocator = xwork__result_locator(pAgent, sArtifact);
++            if ( !sLocator ) goto oom;
++            bool bIndexOk = xwork__buf_appendf(&tIndex,
++                "[tool output truncated in context: %zu bytes; full output saved as artifact %llu at %s]\n"
++                "Read the file in pages with read(path, max_bytes=4096).\n",
++                iLength, (unsigned long long)uArtifactId,
++                sLocator[0] ? sLocator : sArtifact);
++            free(sLocator);
++            if ( bIndexOk ) sInline = xwork__buf_detach(&tIndex);
++            xwork__buf_unit(&tIndex);
++        } else sInline = xwork__strdup(tOutput.sContent ? tOutput.sContent : "");
+         if ( !sInline ) goto oom;
+     } else if ( !xwork__spill_tool_output(
+             pAgent,
+@@ -741,6 +792,7 @@
      free(sArtifact);
      xwork__buf_unit(&tSession);
      xwork__buf_unit(&tHookOutput);
@@ -189,7 +215,7 @@
      return eResult;
  }
  
-@@ -1026,7 +1061,7 @@
+@@ -1026,7 +1078,7 @@
      return true;
  }
  
@@ -198,7 +224,7 @@
      xwork_agent* pAgent,
      const char* sPrompt,
      const xllm_message* pUserMessage,
-@@ -1041,6 +1076,7 @@
+@@ -1041,6 +1093,7 @@
      uint64_t uPreviousBatchHash = 0u;
      uint32_t uRepeatedBatches = 0u;
      uint32_t uConsecutiveToolFailures = 0u;
@@ -206,7 +232,7 @@
      uint32_t uVerificationPrompts = 0u;
      bool bNeedNewTurn = false;
      bool bRecoverPendingTools = false;
-@@ -1296,6 +1332,11 @@
+@@ -1296,6 +1349,11 @@
              bRecoverPendingTools = false;
              bNeedNewTurn = true;
          }
@@ -218,7 +244,7 @@
          eResult = xwork__compact_if_needed(pAgent, uTurn, &tRun, false, pError);
          if ( eResult != XWORK_RESULT_OK ) goto cleanup;
          if ( bNeedNewTurn ) {
-@@ -1336,6 +1377,25 @@
+@@ -1336,6 +1394,25 @@
          }
          tRequest.bParallelToolCalls = true;
          tRequest.eToolChoice = XLLM_TOOL_CHOICE_AUTO;
@@ -244,7 +270,7 @@
          memset(&tEvent, 0, sizeof(tEvent));
          {
              char sRequestFingerprint[17];
-@@ -1393,6 +1453,12 @@
+@@ -1393,6 +1470,12 @@
              eResult = XWORK_RESULT_ERROR;
              goto cleanup;
          }
@@ -257,7 +283,7 @@
          if ( !xwork__usable_model_response(pResponse) ) {
              xllmErrorInit(&tModelError);
              tModelError.eCode = XLLM_ERROR_PROTOCOL;
-@@ -1406,6 +1472,7 @@
+@@ -1406,6 +1489,7 @@
              eResult = XWORK_RESULT_ERROR;
              goto cleanup;
          }
@@ -265,7 +291,7 @@
          tRun.tLastUsage = pResponse->tUsage;
          if ( !xllmSessionAddAssistantResponse(pAgent->pSession, uTurn, pResponse) ) {
              xllmResponseDestroy(pResponse);
-@@ -1612,6 +1679,24 @@
+@@ -1612,6 +1696,24 @@
      return eResult;
  }
  

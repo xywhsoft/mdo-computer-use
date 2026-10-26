@@ -49,7 +49,7 @@ static void Run(bool Image) {
     bool Added=Image?xllmSessionAddToolResultWithImage(Session,Context.uTurn,Call.sId,
         Result.sContent,Result.pImageBytes,Result.iImageSize,Result.sImageMime):
         xllmSessionAddToolResult(Session,Context.uTurn,Call.sId,Result.sContent);
-    if(!Added||!strstr(Result.sContent,"@results/"))exit(5);
+    if(!Added||!strstr(Result.sContent,"full output saved as artifact"))exit(5);
     xworkExecutorUnbind(&Executor);xworkAgentDestroy(Agent);xllmSessionDestroy(Session);
 }
 void ServiceInit(XS_HostInfo* Host){

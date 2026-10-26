@@ -41,5 +41,22 @@
     "final_text": "所有操作已完成并确认。让我仔细查看蓝色画布中的 Visual code。\n\n从最新截图中的蓝色画布可以读出：\n- **CANVAS TARGET**\n- **Visual code: 775493**\n- Left: 0 Right: 0\n\n所有验收操作已全部完成。下面是结果报告：\n\n---\n\n## ✅ MDO Computer Use 验收 — 操作结果报告\n\n**目标窗口**：MDO Computer Use Acceptance（pid: 106124, window_id: 9965510）\n\n### 已执行的的操作\n\n| 操作 | 目标 | 结果 |\n|------|------|------|\n| **① 输入文本** | Input text 编辑框 | ✅ 成功写入「墨斗 Computer Use 验收」（已读回确认） |\n| **② 点击 Increment counter** | 计数器按钮（UIA Invoke，后台投递） | ✅ 计数从 `0` → `1` |\n| **③ 勾选 Enable option** | 复选框（TogglePattern，前台投递） | ✅ 已勾选（✓ 确认） |\n| **④ 设置 Color** | Color 下拉框（set_value → CB_SETCURSEL） | ✅ 从 `Red` 改为 `Green`（读回确认 index=1） |\n\n### 🎯 蓝色画布 Visual code 读取结果\n\n```\nCANVAS TARGET\nVisual code: 775493\nLeft: 0  Right: 0\n```\n\n**六位 Visual code = `775493`**\n\n### 备注\n- 操作 Color 时 UIA provider 一度返回空树（`BuildUpdatedCache failed`），通过 `bring_to_front` 将窗口激活并延长超时后成功恢复，最终用 `set_value` 正确设置 Green。\n- 全程仅操作了目标测试窗口，未触碰其他应用。",
     "gui_tools_only": false,
     "post_click_image": true
+  },
+  "browser_before_result_budget_fix": {
+    "passed": false,
+    "checks": {
+      "run_succeeded": false,
+      "text": false,
+      "button_once": false,
+      "checkbox": false,
+      "selection": false,
+      "scroll": false,
+      "screenshot_retained": false
+    },
+    "elapsed_seconds": 305.39,
+    "session_id": "V--u87gZ3RtLrxa2Vz3NCjCAmVNOT4y4",
+    "run_id": "run-V--u87gZ3sLmDXW9nAf9LLPWmfoOxurs",
+    "error_code": "context",
+    "reason": "persisted 31577-byte typed MCP text bypassed inline spill and exceeded the native session 16384-byte tool-result cap"
   }
 }
