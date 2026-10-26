@@ -1,0 +1,50 @@
+{
+  "format": "mdo.mcp-template.v1",
+  "id": "cua-driver",
+  "operator": "Cua AI / 本机设备",
+  "homepage": "https://cua.ai/docs/cua-driver",
+  "source_url": "https://github.com/trycua/cua/tree/cua-driver-rs-v0.38.0/libs/cua-driver",
+  "capabilities": ["本机桌面截图与窗口发现", "鼠标、键盘及控件操作", "Cua 原生浏览器工具"],
+  "inputs": [
+    {
+      "id": "driver-path",
+      "type": "file",
+      "label": "Cua Driver 程序路径",
+      "description": "选择已解压的官方 Cua Driver 0.38.0 中的 cua-driver.exe。保留同目录的其他官方文件。",
+      "required": true,
+      "secret": false
+    }
+  ],
+  "variants": [
+    {
+      "id": "windows",
+      "label": "Windows 桌面",
+      "platforms": ["windows-x86_64"],
+      "requirements": "在 Windows 交互桌面安装官方 Cua Driver 0.38.0，使用支持图片及工具调用的模型。控制的是运行 mdo 的设备。模板不下载程序、不安装 Skill、不注入提示词；上游已知 UWP 窗口和取消问题保留原样。",
+      "config": {
+        "schema_version": 1,
+        "name": "Computer Use",
+        "description": "Cua Driver desktop automation.",
+        "transport": {
+          "type": "stdio",
+          "program": {"input": "driver-path"},
+          "arguments": ["mcp", "--direct"],
+          "working_directory": null,
+          "inherit_environment": true,
+          "environment": []
+        },
+        "protocol_version": "2026-07-28",
+        "startup_timeout_ms": 10000,
+        "request_timeout_ms": 30000,
+        "limits": {"message_bytes": 16777216, "tools": 256},
+        "tools": {"allow": [], "deny": []},
+        "security": {
+          "default_effects": ["external-service"],
+          "permission_profile": "balanced",
+          "trust_read_only_annotations": false
+        },
+        "auto_reconnect": true
+      }
+    }
+  ]
+}

@@ -130,6 +130,13 @@ def main() -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     deploy_parser = commands.add_parser("deploy", help="Reuse one existing mdo executable")
     deploy_parser.add_argument("--mdo", type=Path, required=True)
+    driver_parser = commands.add_parser("driver", help="Install/verify the pinned official Cua ZIP")
+    driver_parser.add_argument("--archive", type=Path, help="Reuse an existing official archive")
+    config_parser = commands.add_parser("configure", help="Configure the project-local Cua connection")
+    config_parser.add_argument("--driver", type=Path)
+    config_parser.add_argument("--enable", action="store_true")
+    config_parser.add_argument("--replace", action="store_true")
+    commands.add_parser("package", help="Build an importable mdo MCP service template")
     for name in ("smoke", "run"):
         command = commands.add_parser(name)
         command.add_argument("--port", type=int, default=5391)
@@ -138,6 +145,25 @@ def main() -> int:
     try:
         if args.command == "deploy":
             print(json.dumps(deploy(args.mdo), indent=2))
+        elif args.command in ("driver", "configure", "package"):
+            from . import driver
+            if args.command == "driver":
+                executable = driver.install(STATE, args.archive)
+                write_json(STATE / "driver.json", {"version": driver.LOCK["version"],
+                           "path": str(executable), "sha256": sha256(executable)})
+                print(executable)
+            elif args.command == "package":
+                path = STATE / "computer-use.mdo-extension.json"
+                write_json(path, driver.extension_package())
+                print(path)
+            else:
+                executable = args.driver or STATE / "cua" / driver.LOCK["version"] / "cua-driver.exe"
+                config = driver.connection(executable, args.enable)
+                path = HOME / "mcp/cua-driver.json"
+                if path.exists() and not args.replace and json.loads(path.read_text(encoding="utf-8")) != config:
+                    raise ValueError("Connection already differs; use --replace to explicitly replace it")
+                write_json(path, config)
+                print(path)
         else:
             if not 1 <= args.port <= 65535:
                 raise ValueError("port must be between 1 and 65535")

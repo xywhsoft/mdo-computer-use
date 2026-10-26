@@ -30,6 +30,31 @@ observed bootstrap `ready`, and stopped its owned process. Its SHA-256 is
 No SDK checkout, Android toolchain, or duplicate validation application was
 created. This stage does not yet configure Cua or a model.
 
+### Stage 2 — official driver and MCP template
+
+The pinned ZIP and all six extracted files have been SHA-256 verified. The
+complete official driver is installed once under
+`.build/computer-use/cua/0.38.0/`. A second install verifies/reuses it. The
+project-local MCP definition starts disabled and mdo's real native parser
+accepts it without connecting. The generated service package passes mdo's
+`plan_import` API and reports that device configuration is required.
+
+```powershell
+python -m computer_use driver --archive PATH_TO_OFFICIAL_ZIP
+python -m computer_use configure
+python -m computer_use package
+python -m unittest discover -s tests -p test_computer_use.py
+```
+
+Omit `--archive` to download exactly the pinned official release. The package
+output is `.build/computer-use/computer-use.mdo-extension.json`; its contents
+contain only a public MCP template. It does not contain the local driver path,
+driver binaries, credentials or Agent instructions. Enable the device connection
+explicitly with `python -m computer_use configure --enable --replace` while mdo
+is stopped, then launch it. On Windows the binary files remain byte-identical
+to the official archive. Other platforms are not advertised as validated yet;
+their future templates can use the same MCP contract with native launch modes.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo
