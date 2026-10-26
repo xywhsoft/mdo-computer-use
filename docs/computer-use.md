@@ -23,6 +23,19 @@ python -m computer_use run
 
 ## 在另一台 Windows 设备安装
 
+使用支持目录式 MCP 的 mdo（构建号至少 70000057），从 MCP 商店或本地导入
+`computer-use.mdo-extension.json` 即可。新包随附官方 Cua 六个文件，安装在
+`mdo-home/mcp/cua-driver/`，私有配置为同目录的 `mcp.json`。
+检查配置后启用并测试连接，无需 Python、手工下载驱动、解压或填写 EXE 路径。
+安装默认停用，普通方案不授予已有浏览器配置访问权限。
+
+开发者可在 MCP 列表选择「复制程序到 MCP 目录」，明确填写分发目录，再直接
+导出完整包或分享到创作中心。打包、压缩、校验、安装和相对路径解析均由 mdo 原生代码执行。
+发布前检查公开启动参数和分发文件；创作者的 100 MiB 版本额度可容纳当前包。
+目录格式及兼容规则见 [MCP 目录](mcp-directories.md)。
+
+### 从源码部署与旧式连接调试
+
 需要 Python 3.12+；从源码构建还需要 mdo 原有 Windows C 构建工具链和
 `deps.lock` 指定的 XServer 源码对象。驱动安装不需要 Python 第三方依赖。
 Python 用于本仓库的部署/验证命令；安装好程序与连接后，mdo 和 Cua 运行本身
@@ -42,6 +55,10 @@ python -m computer_use install-template
 ZIP 约 34.23 MiB，解压后约 93.76 MiB。基础驱动不附带可选模型或 perception 扩展。
 
 `configure` 创建停用的设备连接。在 mdo「设置 → MCP」中启用并测试连接。
+该命令保留旧式单 JSON 配置供开发验收使用，`install-template` 也保留旧模板验证。
+它们不会覆盖已经安装的同名目录式 MCP；同一个 ID 不应同时创建两种布局。
+`package` 默认包含六个驱动文件，可用 `--driver-directory PATH` 复用官方文件，
+或用 `--template-only` 明确导出旧式、不含驱动的模板。
 也可在 mdo 停止时明确执行：
 
 ```powershell
@@ -66,11 +83,12 @@ python -m computer_use configure --enable --replace --grant-existing-profile
 
 ## 模板分发与扩展系统
 
-生成的 `.build/computer-use/computer-use.mdo-extension.json` 是普通
-`mdo.extension.v1` 包，包含一个 `mdo.mcp-template.v1` 服务模板。
-它可以使用 mdo 原有扩展导入流程安装；未向线上商店发布。
+默认生成的 `.build/computer-use/computer-use.mdo-extension.json` 是
+`mdo.extension.v2` 包，包含 `mdo.mcp-template.v2` 和官方驱动文件。
+当前包版本 0.2.0，最低客户端构建号 70000057；可以使用现有扩展导入流程安装。
+客户端与平台共享校验器已同步适配，尚未部署线上或投稿。
 
-模板只分发公开配置，不包含驱动、本机路径或账号信息。用户安装模板后，在
+`--template-only` 保留旧式 0.1.2 / `mdo.extension.v1` 分发，不包含驱动、本机路径或账号信息。用户安装旧模板后，在
 「设置 → MCP」选择已安装模板，创建连接并填写 `cua-driver.exe` 路径，预览参数，
 确认信任该本机程序后保存，再启用并测试。连接与模板生命周期分离，连接默认停用。
 开发目录的命令行配置与这个模板生成相同的 Cua 启动参数。

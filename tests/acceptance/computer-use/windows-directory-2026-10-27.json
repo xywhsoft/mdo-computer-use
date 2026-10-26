@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "driver_version": "0.38.0",
+  "model": false,
+  "official_files": 6,
+  "host_sha256": "2029cb8fdd5835c7e286ff042cdbdf170924794687af92125244e85beab5b7c9",
+  "mdo_minimum_build": 70000057,
+  "original_bytes": 98317262,
+  "passed": true,
+  "package_bytes": 45821254,
+  "package_sha256": "54a7d957231b7eff4d26917fc6ece438e2b2821ff1f363e0fbf6827ab62631bd",
+  "initial_tools": 63,
+  "personal_alias_tools": 63,
+  "project_tools": 63,
+  "after_update_tools": 63,
+  "after_update_alias_tools": 63,
+  "after_update_project_tools": 63,
+  "after_move_tools": 63,
+  "uninstalled_disabled": true
+}

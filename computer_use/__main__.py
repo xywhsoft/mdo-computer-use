@@ -153,7 +153,9 @@ def main() -> int:
     config_parser.add_argument("--replace", action="store_true")
     config_parser.add_argument("--grant-existing-profile", action="store_true",
         help="Explicitly authorize official Cua to attach existing Chromium profiles")
-    commands.add_parser("package", help="Build an importable mdo MCP service template")
+    package_parser=commands.add_parser("package", help="Package the official driver with its MCP configuration")
+    package_parser.add_argument("--driver-directory",type=Path,help="Reuse an already verified official Cua directory")
+    package_parser.add_argument("--template-only",action="store_true",help="Export the legacy template without program files")
     commands.add_parser("probe", help="Verify real mdo/Cua discovery and disconnect")
     commands.add_parser("install-template", help="Import the public template through the native mdo API")
     commands.add_parser("verify-template", help="Verify native template connection creation and removal")
@@ -232,7 +234,8 @@ def main() -> int:
                 print(executable)
             elif args.command == "package":
                 path = STATE / "computer-use.mdo-extension.json"
-                write_json(path, driver.extension_package())
+                directory=None if args.template_only else args.driver_directory or STATE / "cua" / driver.LOCK["version"]
+                write_json(path, driver.extension_package(directory))
                 print(path)
             elif args.command in ("probe", "install-template", "verify-template"):
                 from .integration import probe, install_template, verify_template

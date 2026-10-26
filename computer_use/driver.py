@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import base64
+import zlib
 from pathlib import Path
 import shutil
 import urllib.request
@@ -89,9 +91,9 @@ def connection(driver: Path, enabled: bool = False, grant_existing_profile: bool
     return config
 
 
-def extension_package() -> dict:
+def extension_package(directory: Path | None = None) -> dict:
     template = (PACKAGE / "template.json").read_text(encoding="utf-8")
-    return {
+    package = {
         "format": "mdo.extension.v1",
         "manifest": {"slug": "mdo-computer-use", "name": "Computer Use（Cua Driver）",
                      "version": "0.1.2", "description": "通过官方 Cua Driver 操作当前设备的桌面。",
@@ -99,3 +101,24 @@ def extension_package() -> dict:
                      "license": "MIT", "platforms": ["windows-x86_64"]},
         "resources": [{"kind": "mcp", "id": "cua-driver", "content": template}],
     }
+    if directory is None:
+        return package  # Legacy template-only callers remain compatible.
+    directory = directory.resolve(strict=True)
+    verify(directory)
+    recipe = json.loads(template)
+    recipe.update(format="mdo.mcp-template.v2", inputs=[])
+    for variant in recipe["variants"]:
+        variant["config"]["transport"].update(program="./cua-driver.exe", working_directory=".")
+    files = []
+    for name, expected in LOCK["files"].items():
+        data = (directory / name).read_bytes()
+        if len(data) != expected["bytes"] or hashlib.sha256(data).hexdigest() != expected["sha256"]:
+            raise ValueError("Official Cua files changed while packaging")
+        files.append(dict(path=name, encoding="zlib", size=len(data), sha256=expected["sha256"],
+                          mode=0o755 if name.endswith(".exe") else 0o644,
+                          base64=base64.b64encode(zlib.compress(data)).decode("ascii")))
+    package["format"] = "mdo.extension.v2"
+    package["manifest"].update(version="0.2.0", min_build_id=70000057,
+        readme="随包附带官方 Cua Driver 0.38.0 全部六个文件。安装后检查配置并启用；无需手动解压或选择程序路径。现有浏览器访问须另行明确授权。")
+    package["resources"][0].update(content=json.dumps(recipe, ensure_ascii=False), files=files)
+    return package

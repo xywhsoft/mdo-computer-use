@@ -8,6 +8,10 @@ from computer_use.__main__ import STATE
 
 
 class ComputerUsePackage(unittest.TestCase):
+    def test_bundled_package_rejects_unverified_program_directory(self):
+        with self.assertRaises((ValueError, FileNotFoundError)):
+            driver.extension_package(Path(__file__).parent)
+
     def test_public_template_contains_only_device_binding(self):
         package = driver.extension_package()
         self.assertEqual([item["kind"] for item in package["resources"]], ["mcp"])

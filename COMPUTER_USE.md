@@ -11,6 +11,25 @@ prompt, Skill, recovery policy, or Cua compatibility patch is installed.
 
 ## Delivery status — 2026-10-27
 
+Directory distribution now ships the official driver together with its MCP
+configuration. The native authoring API copied and compressed all six files
+into a 45,821,254-byte package (43.70 MiB), with 98,317,262 original bytes.
+The package uses version 0.2.0 and requires mdo build 70000057 or newer.
+Its installed layout is `mdo-home/mcp/cua-driver/mcp.json` beside the driver.
+
+Native acceptance passed initial installation, personal aliases, project
+connections, update while all three instances were connected, Home relocation,
+and uninstall. Every connected case discovered 63 tools. All official file
+hashes were preserved. The same cases passed on the reused GUI runtime; no
+SDK/application copy or new model request was needed. See
+[`windows-directory-2026-10-27.json`](tests/acceptance/computer-use/windows-directory-2026-10-27.json).
+
+The client and platform validators, creator preview and reviewed-file download
+support the new packages. Platform source commits are `c5fc0f60` and `031efd4b`;
+online deployment and marketplace submission have not been performed.
+The following model and per-tool acceptance records are earlier integration
+results, not a new model stability claim for this packaging change.
+
 The Windows integration and remaining acceptance are complete. The existing
 account model completed both full desktop and browser tasks on the default
 Responses route, checked against independent oracles and retained tool images.
