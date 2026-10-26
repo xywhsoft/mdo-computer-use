@@ -46,7 +46,7 @@ static xvalue* McpConnectionTemplate(const xvalue* Body,const xvalue* Old,xvalue
     if(!ReceiptKey&&!MdoPackageNumber(Body,"receipt_id",&Id)){const xvalue* B=McpConnectionBinding(Old);*Receipt=xrtValueClone(xrtValueObjectGet(B,XRT_STR_LITERAL("receipt")));return xrtValueClone(xrtValueObjectGet(B,XRT_STR_LITERAL("template")));}
     char Key[81];if(ReceiptKey)snprintf(Key,sizeof(Key),"%s",ReceiptKey);else snprintf(Key,sizeof(Key),"%lld",(long long)Id);bool Known=false;xvalue* Records=ExtensionStoreRead(&Known);const xvalue* R=xrtValueObjectGet(Records,xrtStrView(Key)),*Files=xrtValueObjectGet(R,XRT_STR_LITERAL("files"));
     xvalue* T=NULL;
-    for(size_t i=0;Known&&i<xrtValueCount(Files);i++){const xvalue* F=xrtValueArrayGet(Files,i);cstr Path=MdoPackageText(F,"path",255);if(!Path||strncmp(Path,"data/ecosystem/mcp/",19))continue;
+    for(size_t i=0;Known&&i<xrtValueCount(Files);i++){const xvalue* F=xrtValueArrayGet(Files,i);cstr Path=MdoPackageText(F,"path",255);if(!EcoMcpTemplatePath(Path))continue;
         bool Missing=false;char* Text=EcoLocalUnchanged(F)?MdoExtensionRead(Path,true,131072,&Missing):NULL;T=Text?xrtJsonParse(xrtStrView(Text)):NULL;xrtFree(Text);if(T){*Receipt=xrtValueClone(R);break;}}
     xrtValueRelease(Records);return T;
 }
@@ -103,7 +103,7 @@ bool MdoApiMcpTemplatesRoute(MdoApiContext* C)
     xvalueiter It={0};xvaluekey K;xvalue* R;bool Ok=Known&&Items;
     if(xrtValueIterBegin(Records,&It)){while(Ok&&(R=xrtValueIterNext(&It,&K))){
         const xvalue* Files=xrtValueObjectGet(R,XRT_STR_LITERAL("files"));
-        for(size_t i=0;Ok&&i<xrtValueCount(Files);i++){const xvalue* F=xrtValueArrayGet(Files,i);cstr P=MdoPackageText(F,"path",255);if(!P||strncmp(P,"data/ecosystem/mcp/",19))continue;
+        for(size_t i=0;Ok&&i<xrtValueCount(Files);i++){const xvalue* F=xrtValueArrayGet(Files,i);cstr P=MdoPackageText(F,"path",255);if(!EcoMcpTemplatePath(P))continue;
             bool Missing=false;char* Text=EcoLocalUnchanged(F)?MdoExtensionRead(P,true,131072,&Missing):NULL;xvalue* T=Text?xrtJsonParse(xrtStrView(Text)):NULL;xrtFree(Text);xvalue* Item=xrtValueObject();
             Ok=Item&&MdoApiValueSetBool(Item,"valid",T!=NULL)&&xrtValueObjectSet(Item,XRT_STR_LITERAL("receipt"),R)&&(!T||xrtValueObjectSet(Item,XRT_STR_LITERAL("template"),T))&&xrtValueArrayAppend(Items,Item);xrtValueRelease(Item);xrtValueRelease(T);}}
         xrtValueIterEnd(&It);}

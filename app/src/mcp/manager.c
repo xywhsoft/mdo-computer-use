@@ -1119,7 +1119,9 @@ static bool MdoMcpResolveDirectory(const MdoMcpSource* Source,MdoMcpServerEntry*
     xroot Root=Native?xrtRootOpen(Native):NULL;bool Ok=Root!=NULL;
     if(Ok&&Relative){xfileoptions Options;xrtFileOptionsInit(&Options);Options.Flags=XFILE_READ|XFILE_NOFOLLOW;
         xfile File=xrtRootFileOpen(Root,ProgramTail,&Options);xfileinfo Info;
-        Ok=File&&xrtFileStat(File,&Info)&&Info.Type==XFILE_TYPE_FILE;xrtClose(File);
+        Ok=File&&xrtFileStat(File,&Info)&&Info.Type==XFILE_TYPE_FILE;
+        if(!File&&!Entry->Enabled&&xrtGetError()&&xrtErrorKind(xrtGetError())==XERR_NOT_FOUND){xrtClearError();Ok=true;}
+        xrtClose(File);
         if(Ok){char* Program=xrtPathJoin(Native,ProgramTail);Ok=Program!=NULL;if(Ok){xrtFree(Entry->Program);Entry->Program=Program;}}}
     if(Ok&&RelativeCwd){cstr Tail=Entry->WorkingDirectory;
         if(!strcmp(Tail,".")||!strcmp(Tail,"./"))Tail="";else if(!strncmp(Tail,"./",2))Tail+=2;
@@ -1468,7 +1470,14 @@ static bool MdoMcpParseServer(const MdoMcpSource* pSource,
             }
         }
     }
-    Ok = MdoMcpResolveDirectory(pSource,pEntry,Error);
+    {MdoMcpSource Source=*pSource;char DirectoryPath[160];
+        const xvalue* Binding=MdoMcpObjectGet(pRoot,"mdo_template"),*Template=MdoMcpObjectGet(Binding,"template");
+        cstr TemplateId=MdoPackageText(Template,"id",64);
+        if(Source.RelativePath&&MdoMcpDirectoryTemplate(Template)&&MdoPackageId(TemplateId)){
+            snprintf(DirectoryPath,sizeof(DirectoryPath),"mcp/%s/mcp.json",TemplateId);Source.RelativePath=DirectoryPath;Source.External=true;
+        }
+        Ok=MdoMcpResolveDirectory(&Source,pEntry,Error);
+    }
 
 done:
     xrtValueRelease(pRoot);

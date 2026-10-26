@@ -16,6 +16,7 @@ static xmutex* g_MdoExtensionLock;
 static const xvalue* McpConnectionBinding(const xvalue*);
 static bool McpConnectionCredits(xvalue*,const xvalue*);
 static bool McpConnectionReferenced(cstr);
+static xvalue* McpConnectionResolve(const xvalue*,const xvalue*,unsigned);
 static xvalue* KnowledgeCurrentFiles(cstr);
 static bool KnowledgeWrite(MdoApiContext*,cstr);
 bool MdoApiExtensionsInit(void) { g_MdoExtensionLock = xrtMutexCreate(); return g_MdoExtensionLock != NULL; }

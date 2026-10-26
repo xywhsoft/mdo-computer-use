@@ -18,9 +18,10 @@ export function makeStorePackage(fields, resources) {
     return { ...r, content: JSON.stringify({ ...doc, version: fields.version, name: fields.name.trim(), description: fields.description.trim(), author: fields.author || doc.author || "", copyright: fields.copyright || doc.copyright || "", license: fields.license.trim() }) };
   });
   const roles = resources.some(r => isRoleKind(r.kind));
-  const v2 = roles || fields.min_build_id || resources.some(r => ["modules", "toolpacks", "plugins", "knowledge"].includes(r.kind));
+  const directoryMcp=resources.some(r=>r.kind==="mcp"&&Array.isArray(r.files));
+  const v2 = directoryMcp || roles || fields.min_build_id || resources.some(r => ["modules", "toolpacks", "plugins", "knowledge"].includes(r.kind));
   const modernPlugins = resources.some(r => r.kind === "plugins" && pluginDocument(r)?.format === "mdo.plugin.v1");
-  const minimumBuild = Math.max(fields.min_build_id || 0, roles ? ROLE_MIN_BUILD : 0, resources.some(r => r.kind === "knowledge") ? KNOWLEDGE_MIN_BUILD : 0, modernPlugins ? PLUGIN_MIN_BUILD : 0);
+  const minimumBuild = Math.max(fields.min_build_id || 0, directoryMcp?70000057:0, roles ? ROLE_MIN_BUILD : 0, resources.some(r => r.kind === "knowledge") ? KNOWLEDGE_MIN_BUILD : 0, modernPlugins ? PLUGIN_MIN_BUILD : 0);
   if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(fields.slug) || fields.slug.includes(".."))
     throw new Error("Invalid package ID");
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$/.test(fields.version)) throw new Error("Invalid version");
@@ -56,8 +57,9 @@ export function resourceReferences(row) {
   for (const file of row.files || []) {
     const match = /^(agents|subagents|tools|mcp|commands)\/([^/]+)\.(?:md|c|json)$/.exec(file.path);
     const skill = /^skills\/([^/]+)\/SKILL\.md$/.exec(file.path);
+    const mcp = /^mcp\/([^/]+)\/template\.json$/.exec(file.path);
     const code = /^modules\/(agents|subagents)\/([^/]+)\.c$/.exec(file.path);
-    const ref = match ? {kind:match[1],id:match[2]} : skill ? {kind:"skills",id:skill[1]} : code ? {kind:`c-${code[1]}`,id:code[2]} : null;
+    const ref = match ? {kind:match[1],id:match[2]} : skill ? {kind:"skills",id:skill[1]} : mcp?{kind:"mcp",id:mcp[1]} : code ? {kind:`c-${code[1]}`,id:code[2]} : null;
     if (ref) refs.set(`${ref.kind}/${ref.id}`,ref);
   }
   return [...refs.values()];

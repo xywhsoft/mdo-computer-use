@@ -104,7 +104,7 @@ static bool EcoNativePrepare(xvalue* Files,const xvalue* Package,const xvalue* P
 }
 static bool EcoNativeNeedsConfiguration(const xvalue* Package)
 {
-    const xvalue* Rs=xrtValueObjectGet(Package,XRT_STR_LITERAL("resources"));for(size_t i=0;i<xrtValueCount(Rs);i++){cstr Kind=MdoPackageText(xrtValueArrayGet(Rs,i),"kind",16);if(Kind&&!strcmp(Kind,"mcp"))return true;}return false;
+    const xvalue* Rs=xrtValueObjectGet(Package,XRT_STR_LITERAL("resources"));for(size_t i=0;i<xrtValueCount(Rs);i++){const xvalue* R=xrtValueArrayGet(Rs,i);cstr Kind=MdoPackageText(R,"kind",16);if(Kind&&!strcmp(Kind,"mcp")&&!xrtValueObjectHas(R,XRT_STR_LITERAL("files")))return true;}return false;
 }
 static bool EcoNativeModes(const xvalue* Files)
 {

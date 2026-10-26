@@ -22,7 +22,7 @@ export function mcpTemplateSummary(template) {
 }
 export function parseMcpTemplate(text) {
   const template = JSON.parse(text);
-  if (template?.format !== "mdo.mcp-template.v1" || !Array.isArray(template.inputs) || !Array.isArray(template.variants) || !template.variants.length) throw Error("请选择 MCP 服务模板（mdo.mcp-template.v1）");
+  if (!["mdo.mcp-template.v1","mdo.mcp-template.v2"].includes(template?.format) || !Array.isArray(template.inputs) || !Array.isArray(template.variants) || !template.variants.length) throw Error("请选择 MCP 服务模板");
   if (template.inputs.some(i => i.secret && Object.hasOwn(i, "default"))) throw Error("凭据参数不能包含默认值");
   return template;
 }

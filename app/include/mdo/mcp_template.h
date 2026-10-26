@@ -42,7 +42,7 @@ static bool MdoMcpTemplateLeaf(const xvalue* T,const xvalue* V,bool Secret,bool 
         return MdoMcpTemplateKeys(V,"|input|")&&I&&MdoMcpTemplateFlag(I,"secret",false)==Secret;}
     xstrview S;if(Secret||!xrtValueGetString(V,&S)||S.Size>4096||memchr(S.Data,0,S.Size)||!MdoMcpTemplateString(S.Data))return false;
     if(Url)return MdoMcpTemplateUrl(S.Data);
-    if(Program)return S.Size&&!strpbrk(S.Data,"/\\:");
+    if(Program)return MdoMcpDirectoryTemplate(T)?MdoMcpDirectoryEntry(S.Data)!=NULL:S.Size&&!strpbrk(S.Data,"/\\:");
     return true;
 }
 static bool MdoMcpTemplateValidate(const xvalue* T,cstr Id,char* Error,size_t Capacity)
@@ -50,7 +50,7 @@ static bool MdoMcpTemplateValidate(const xvalue* T,cstr Id,char* Error,size_t Ca
     cstr Why="Invalid MCP service template";int64 N=0;
     if(!MdoMcpTemplateKeys(T,"|format||id||operator||homepage||source_url||capabilities||inputs||variants|"))goto bad;
     cstr F=MdoPackageText(T,"format",32),Tid=MdoPackageText(T,"id",64);
-    if(!F||strcmp(F,MDO_MCP_TEMPLATE_FORMAT)||!Tid||strcmp(Tid,Id))goto bad;
+    if(!F||(strcmp(F,MDO_MCP_TEMPLATE_FORMAT)&&!MdoMcpDirectoryTemplate(T))||!Tid||strcmp(Tid,Id))goto bad;
     for(size_t k=0;k<2;k++){cstr S=MdoPackageText(T,k?"source_url":"homepage",1000);if(xrtValueObjectHas(T,xrtStrView(k?"source_url":"homepage"))&&(!S||(*S&&!MdoMcpTemplateUrl(S))))goto bad;}
     if(xrtValueObjectHas(T,XRT_STR_LITERAL("operator"))&&!MdoPackageText(T,"operator",256))goto bad;
     const xvalue* Inputs=xrtValueObjectGet(T,XRT_STR_LITERAL("inputs"));
@@ -93,7 +93,11 @@ static bool MdoMcpTemplateValidate(const xvalue* T,cstr Id,char* Error,size_t Ca
             const xvalue* A=xrtValueObjectGet(Tr,XRT_STR_LITERAL("arguments"));if(xrtValueType(A)!=XVALUE_ARRAY||xrtValueCount(A)>256)goto bad;
             for(size_t j=0;j<xrtValueCount(A);j++)if(!MdoMcpTemplateLeaf(T,xrtValueArrayGet(A,j),false,false,false))goto bad;
             const xvalue* Cwd=xrtValueObjectGet(Tr,XRT_STR_LITERAL("working_directory"));
-            if(Cwd&&xrtValueType(Cwd)!=XVALUE_NULL&&(xrtValueType(Cwd)!=XVALUE_OBJECT||!MdoMcpTemplateLeaf(T,Cwd,false,false,false)))goto bad;
+            if(Cwd&&xrtValueType(Cwd)!=XVALUE_NULL){
+                cstr P=MdoPackageText(Tr,"working_directory",4096);
+                if(!(MdoMcpDirectoryTemplate(T)&&P&&(!strcmp(P,".")||MdoMcpDirectoryEntry(P)))&&
+                   (xrtValueType(Cwd)!=XVALUE_OBJECT||!MdoMcpTemplateLeaf(T,Cwd,false,false,false)))goto bad;
+            }
         }else goto bad;
         for(size_t k=0;k<2;k++){
             const xvalue* A=xrtValueObjectGet(Tr,xrtStrView(k?"headers":"environment"));

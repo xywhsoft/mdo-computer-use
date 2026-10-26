@@ -63,6 +63,26 @@ def main():
     combo = package()
     combo["resources"] = [copy.deepcopy(c["package"]["resources"][0]) for c in cases[:9]]
     add("all-nine-combined", combo, True)
+    import hashlib,zlib
+    directory=package("mcp");directory["manifest"]["min_build_id"]=70000057
+    from mcp_template_fixture import template
+    recipe=template("qa-resource","stdio");recipe["format"]="mdo.mcp-template.v2";recipe["inputs"]=[]
+    recipe["variants"][0]["config"]["transport"].update(program="./bin/server.exe",arguments=[],working_directory=".")
+    data=b"MCP executable payload\0"*400
+    directory["resources"][0].update(content=json.dumps(recipe),files=[dict(path="bin/server.exe",base64=base64.b64encode(zlib.compress(data)).decode(),encoding="zlib",size=len(data),sha256=hashlib.sha256(data).hexdigest(),mode=0o755)])
+    add("directory-mcp",directory,True)
+    def invalid_directory(name,mutation):
+        value=copy.deepcopy(directory);mutation(value);add("directory-"+name,value,False)
+    invalid_directory("old-client",lambda p:p["manifest"].update(min_build_id=70000056))
+    invalid_directory("missing-payload",lambda p:p["resources"][0].pop("files"))
+    invalid_directory("hash",lambda p:p["resources"][0]["files"][0].update(sha256="0"*64))
+    invalid_directory("traversal",lambda p:p["resources"][0]["files"][0].update(path="../server.exe"))
+    invalid_directory("reserved-config",lambda p:p["resources"][0]["files"][0].update(path="mcp.json"))
+    invalid_directory("wrong-size",lambda p:p["resources"][0]["files"][0].update(size=len(data)-1))
+    invalid_directory("codec",lambda p:p["resources"][0]["files"][0].update(encoding="unknown"))
+    invalid_directory("permissions",lambda p:p["resources"][0]["files"][0].update(mode=0o777))
+    invalid_directory("path-alias",lambda p:p["resources"][0]["files"].append(dict(p["resources"][0]["files"][0],path="BIN/server.exe")))
+    invalid_directory("missing-entry",lambda p:p["resources"][0]["files"][0].update(path="bin/other.exe"))
     add("legacy", package(version="mdo.extension.v1"), True)
     add("v2-resource-in-v1", package("plugins", "mdo.extension.v1"), False)
     value = package(); value["manifest"]["min_build_id"] = 1
@@ -137,7 +157,7 @@ def main():
         (base / "ecosystem_package.h").write_bytes((ROOT / "app/include/mdo/ecosystem_package.h").read_bytes())
         (base / "mcp_template.h").write_bytes((ROOT / "app/include/mdo/mcp_template.h").read_bytes())
         (base / "knowledge_format.h").write_bytes((ROOT / "app/include/mdo/knowledge_format.h").read_bytes())
-        for name in ("agent_package.h", "agent_config_format.h", "prompt_file.h", "extension_identity.h", "plugin_format.h"):
+        for name in ("agent_package.h", "agent_config_format.h", "prompt_file.h", "extension_identity.h", "plugin_format.h", "mcp_directory.h"):
             (base / name).write_bytes((ROOT / "app/include/mdo" / name).read_bytes())
         source = '#include <xsbase.h>\n#include "ecosystem_package.h"\n' + r'''
 void ServiceInit(XS_HostInfo* Host) {

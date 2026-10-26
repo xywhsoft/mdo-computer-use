@@ -89,6 +89,7 @@ static bool MdoPackageSamePath(const char* a,const char* b)
 {
     for(;*a&&*b;a++,b++){unsigned char x=*a,y=*b;if(x>='A'&&x<='Z')x+=32;if(y>='A'&&y<='Z')y+=32;if(x!=y)return false;}return *a==*b;
 }
+#include "mcp_directory.h"
 #include "mcp_template.h"
 #include "knowledge_format.h"
 #include "agent_package.h"
@@ -130,6 +131,12 @@ static bool MdoPackageValidate(const xvalue* package,char* error,size_t capacity
         for(size_t j=0;j<i;j++){const xvalue* q=xrtValueArrayGet(resources,j);if(!strcmp(kind,MdoPackageText(q,"kind",16))&&!strcmp(id,MdoPackageText(q,"id",64))){reason="Duplicate resource ID";goto bad;}}
         total+=strlen(content);if(total>sourceLimit){reason="Package decoded content exceeds its limit";goto bad;}
         const xvalue* files=xrtValueObjectGet(r,XRT_STR_LITERAL("files"));
+        if(!strcmp(kind,"mcp")&&files){
+            int64 Build=0;xvalue* T=xrtJsonParse(xrtStrView(content));
+            bool Ok=v2&&MdoPackageNumber(m,"min_build_id",&Build)&&Build>=MDO_MCP_DIRECTORY_MIN_BUILD&&
+                MdoMcpTemplateValidate(T,id,error,capacity)&&MdoMcpDirectoryFiles(T,files,error,capacity);
+            xrtValueRelease(T);if(!Ok){if(error&&capacity&&!error[0])snprintf(error,capacity,"Directory MCP packages need v2 and a directory-capable minimum build");return false;}continue;
+        }
         if(files){reason="This resource cannot contain attached files";if((strcmp(kind,"skills")&&strcmp(kind,"knowledge")&&!MdoPackageRoleKind(kind)&&!module&&!plugin&&!toolpack)||xrtValueType(files)!=XVALUE_ARRAY||xrtValueCount(files)>128)goto bad;
             for(size_t j=0;j<xrtValueCount(files);j++){const xvalue* f=xrtValueArrayGet(files,j);const char* path=MdoPackageText(f,"path",220),*base64=MdoPackageText(f,"base64",MdoPackageRoleKind(kind)?180000u:v2?90u*1024u*1024u:180000u);
                 reason="Invalid attached file path or size";if(!(!strcmp(kind,"plugins")?MdoPluginPath(path):MdoPackagePath(path))||(!strcmp(kind,"skills")&&MdoPackageSamePath(path,"SKILL.md"))||!base64)goto bad;
@@ -169,6 +176,7 @@ static bool MdoPackageValidate(const xvalue* package,char* error,size_t capacity
         if(!strcmp(kind,"knowledge")&&!MdoKnowledgeResource(r,error,capacity))return false;
         if(!strcmp(kind,"mcp")){
             xvalue* doc=xrtJsonParse(xrtStrView(content));char why[256];bool ok=MdoMcpTemplateValidate(doc,id,why,sizeof(why));
+            if(MdoMcpDirectoryTemplate(doc)){ok=false;snprintf(why,sizeof(why),"Directory MCP packages must include their program files");}
             xrtValueRelease(doc);if(!ok){if(error&&capacity)snprintf(error,capacity,"%s",why);return false;}
         }
     }

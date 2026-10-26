@@ -13,9 +13,11 @@ static bool McpTemplateReplace(xvalue* O,cstr Key,xvalue* Inputs,cstr Id,cstr La
     if(Ref){char R[80];snprintf(R,sizeof(R),"input:%s",Id);return MdoApiValueSetString(O,Key,R);}
     xvalue* V=xrtValueObject();bool Ok=V&&MdoApiValueSetString(V,"input",Id)&&xrtValueObjectSet(O,xrtStrView(Key),V);xrtValueRelease(V);return Ok;
 }
-static char* McpTemplateExport(cstr Content,cstr Id)
+static char* McpTemplateExportMode(cstr Content,cstr Id,bool Directory)
 {
     xvalue* D=xrtJsonParse(xrtStrView(Content)),*T=xrtValueObject(),*Inputs=xrtValueArray(),*Variants=xrtValueArray(),*V=xrtValueObject(),*C=xrtValueObject();
+    const xvalue* Bound=xrtValueObjectGet(xrtValueObjectGet(D,XRT_STR_LITERAL("mdo_template")),XRT_STR_LITERAL("template"));
+    if(Directory&&MdoMcpDirectoryTemplate(Bound)){char* Result=xrtJsonStringify(Bound,false,NULL);xrtValueRelease(D);xrtValueRelease(T);xrtValueRelease(Inputs);xrtValueRelease(Variants);xrtValueRelease(V);xrtValueRelease(C);return Result;}
     const xvalue* Original=xrtValueObjectGet(D,XRT_STR_LITERAL("transport"));xvalue* Tr=xrtValueObject();cstr Type=MdoPackageText(Original,"type",32);
     bool Ok=D&&T&&Inputs&&Variants&&V&&C&&Tr&&Type&&!xrtValueObjectHas(D,XRT_STR_LITERAL("mdo_template"));
     const char* Keys[]={"schema_version","name","description","protocol_version","startup_timeout_ms","request_timeout_ms","limits","tools","security","auto_reconnect"};
@@ -23,12 +25,14 @@ static char* McpTemplateExport(cstr Content,cstr Id)
     Ok=Ok&&MdoApiValueSetString(Tr,"type",Type);
     if(Ok&&!strcmp(Type,"streamable-http"))Ok=McpTemplateReplace(Tr,"endpoint",Inputs,"endpoint","服务地址（HTTPS）",false,false);
     else if(Ok&&!strcmp(Type,"stdio")){
-        Ok=McpTemplateReplace(Tr,"program",Inputs,"program","可执行文件路径或已安装的命令",false,false)&&MdoApiValueSetBool(Tr,"inherit_environment",false);
+        cstr Program=MdoPackageText(Original,"program",4096);
+        Ok=(Directory?(MdoMcpDirectoryEntry(Program)&&MdoApiValueSetString(Tr,"program",Program)):McpTemplateReplace(Tr,"program",Inputs,"program","可执行文件路径或已安装的命令",false,false))&&MdoApiValueSetBool(Tr,"inherit_environment",false);
         const xvalue* Old=xrtValueObjectGet(Original,XRT_STR_LITERAL("arguments"));xvalue* A=xrtValueArray();
         for(size_t i=0;Ok&&i<xrtValueCount(Old);i++){char Key[32],Label[64];snprintf(Key,sizeof(Key),"argument-%zu",i);snprintf(Label,sizeof(Label),"启动参数 %zu",i+1);xvalue* E=xrtValueObject();
             Ok=McpTemplateDeclare(Inputs,Key,Label,false)&&MdoApiValueSetString(E,"input",Key)&&xrtValueArrayAppend(A,E);xrtValueRelease(E);}
         Ok=Ok&&xrtValueObjectSet(Tr,XRT_STR_LITERAL("arguments"),A);xrtValueRelease(A);
-        if(xrtValueType(xrtValueObjectGet(Original,XRT_STR_LITERAL("working_directory")))==XVALUE_STRING)Ok=Ok&&McpTemplateReplace(Tr,"working_directory",Inputs,"directory","工作目录",false,false);
+        if(Directory)Ok=Ok&&MdoApiValueSetString(Tr,"working_directory",".");
+        else if(xrtValueType(xrtValueObjectGet(Original,XRT_STR_LITERAL("working_directory")))==XVALUE_STRING)Ok=Ok&&McpTemplateReplace(Tr,"working_directory",Inputs,"directory","工作目录",false,false);
     }else Ok=false;
     for(size_t k=0;Ok&&k<2;k++){
         cstr Key=k?"headers":"environment";const xvalue* Old=xrtValueObjectGet(Original,xrtStrView(Key));xvalue* A=xrtValueArray();
@@ -45,7 +49,9 @@ static char* McpTemplateExport(cstr Content,cstr Id)
         Ok=Ok&&xrtValueObjectSet(C,XRT_STR_LITERAL("oauth"),O);xrtValueRelease(O);}
     xvalue* Ps=xrtValueArray();Ok=Ok&&xrtValueArrayAppendNew(Ps,xrtValueString(xrtStrView(MdoToolPlatform())))&&xrtValueObjectSet(C,XRT_STR_LITERAL("transport"),Tr)&&
         MdoApiValueSetString(V,"id","default")&&MdoApiValueSetString(V,"label","默认连接")&&xrtValueObjectSet(V,XRT_STR_LITERAL("platforms"),Ps)&&xrtValueObjectSet(V,XRT_STR_LITERAL("config"),C)&&xrtValueArrayAppend(Variants,V)&&
-        MdoApiValueSetString(T,"format",MDO_MCP_TEMPLATE_FORMAT)&&MdoApiValueSetString(T,"id",Id)&&xrtValueObjectSet(T,XRT_STR_LITERAL("inputs"),Inputs)&&xrtValueObjectSet(T,XRT_STR_LITERAL("variants"),Variants);
+        MdoApiValueSetString(T,"format",Directory?MDO_MCP_DIRECTORY_FORMAT:MDO_MCP_TEMPLATE_FORMAT)&&MdoApiValueSetString(T,"id",Id)&&xrtValueObjectSet(T,XRT_STR_LITERAL("inputs"),Inputs)&&xrtValueObjectSet(T,XRT_STR_LITERAL("variants"),Variants);
     char Error[256];char* Text=Ok&&MdoMcpTemplateValidate(T,Id,Error,sizeof(Error))?xrtJsonStringify(T,true,NULL):NULL;
     xrtValueRelease(Ps);xrtValueRelease(D);xrtValueRelease(T);xrtValueRelease(Inputs);xrtValueRelease(Variants);xrtValueRelease(V);xrtValueRelease(C);xrtValueRelease(Tr);return Text;
 }
+static char* McpTemplateExport(cstr Content,cstr Id)
+{return McpTemplateExportMode(Content,Id,false);}
