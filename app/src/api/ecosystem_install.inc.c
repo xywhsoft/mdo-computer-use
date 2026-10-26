@@ -5,7 +5,7 @@
 #define ECO_JOURNAL_LIMIT (256u*1024u*1024u)
 #include "../../include/mdo/application.h"
 static bool EcoLocalSave(cstr path,const xvalue* value)
-{size_t n=0;char* json=xrtJsonStringify(value,false,&n);size_t limit=!strcmp(path,ECO_JOURNAL)?ECO_JOURNAL_LIMIT:1024u*1024u;bool ok=json&&n<=limit&&MdoHomeAtomicWrite(path,json,n,false);xrtFree(json);return ok;}
+{size_t n=0;size_t limit=!strcmp(path,ECO_JOURNAL)?ECO_JOURNAL_LIMIT:1024u*1024u;char* json=MdoPackageStringify(value,limit,&n);bool ok=json&&n<=limit&&MdoHomeAtomicWrite(path,json,n,false);xrtFree(json);return ok;}
 static xvalue* EcoLocalRead(cstr path,size_t limit,bool empty)
 {bool missing=false;char* text=MdoExtensionRead(path,true,limit,&missing);xvalue* doc=text?xrtJsonParse(xrtStrView(text)):missing&&empty?xrtValueObject():NULL;xrtFree(text);return doc;}
 static bool EcoLocalPath(cstr kind,cstr id,char path[256])
@@ -247,9 +247,12 @@ static bool EcoLocalApply(const xvalue* entry,bool uninstall,char error[1024],xv
     if(ok&&!PluginReady){const xvalue* Issue=xrtValueArrayGet(PluginIssues,0);snprintf(error,1024,"Plugin combination is incompatible: %s / %s (%s)",MdoPackageText(Issue,"id",64),MdoPackageText(Issue,"other",64),MdoPackageText(Issue,"detail",600));ok=false;}
     if(ok&&!DependenciesReady){snprintf(error,1024,"Required role dependencies are missing or disabled; inspect the installation plan and configure them first");ok=false;}
     if(ok)ok=EcoMcpStopChanged(files,error);
-    bool begun=ok&&EcoLocalSave(ECO_JOURNAL,journal);ok=begun;
+    bool begun=ok&&EcoLocalSave(ECO_JOURNAL,journal);
+    if(ok&&!begun&&!error[0])snprintf(error,1024,"Cannot prepare the installation recovery journal: %s",xrtGetError()?xrtErrorMessage(xrtGetError()):"storage unavailable");
+    ok=begun;
     for(size_t i=0;ok&&i<xrtValueCount(files);i++){const xvalue* f=xrtValueArrayGet(files,i);const xvalue* incoming=xrtValueObjectGet(f,XRT_STR_LITERAL("new"));cstr path=MdoPackageText(f,"path",599);
-        ok=xrtValueType(incoming)==XVALUE_NULL?MdoHomeRemove(path,false):EcoLocalPut(path,incoming);}
+        ok=xrtValueType(incoming)==XVALUE_NULL?MdoHomeRemove(path,false):EcoLocalPut(path,incoming);
+        if(!ok&&!error[0])snprintf(error,1024,"Cannot publish package file %s: %s",path,xrtGetError()?xrtErrorMessage(xrtGetError()):"file unavailable");}
     if(ok&&pluginReserved){ok=MdoApplicationPluginsStorePublish(pluginAfter,error,1024);pluginPublished=ok;}
     if(ok)ok=EcoLocalReload()&&(uninstall||EcoRolePublished(package,error))&&EcoNativeModes(files)&&EcoLocalSave(ECO_RECEIPTS,next)&&MdoHomeRemove(ECO_JOURNAL,false);
     if(!ok&&begun){bool restored=MdoEcosystemRecover();if(pluginPublished)restored=MdoApplicationPluginsStorePublish(pluginBefore,error,1024)&&restored;

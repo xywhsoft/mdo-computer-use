@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", type=Path, default=Path("D:/GIT/mdo/.build/host/xs.exe"))
+    parser.add_argument("--host", type=Path, default=next((p for p in (ROOT/".build/host/xs.exe",ROOT/".build/mcp-directory-host/xsw.exe") if p.is_file()),ROOT/".build/host/xs.exe"))
     args = parser.parse_args()
     (ROOT / ".build").mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="mcp-directory-", dir=ROOT / ".build") as temporary:
@@ -28,7 +28,7 @@ def main():
         valid["transport"]["working_directory"] = "."
         config_file = folder.parent / "mcp.json"
         config_file.write_text(json.dumps(valid))
-        legacy=json.loads(server_document(os.sys.executable,"legacy-script","legacy-marker",server_id="legacy"))
+        legacy=json.loads(server_document("./legacy-tool.exe","legacy-script","legacy-marker",server_id="legacy"))
         (home / "mcp/legacy.json").write_text(json.dumps(legacy))
         (folder / "ignored.json").write_text("not an MCP configuration")
         bad = json.loads(json.dumps(valid))
@@ -54,6 +54,8 @@ void ServiceInit(XS_HostInfo* Host){
     MdoMcpDiagnosticsRelease(Diagnostics);
     MdoMcpCatalog* Catalog=MdoMcpCatalogSnapshot();MdoMcpServerInfo Info={0};Info.Size=sizeof(Info);
     Check(MdoMcpCatalogCount(Catalog)==2,"legacy-coexists");
+    MdoMcpServerInfo Legacy={0};Legacy.Size=sizeof(Legacy);
+    Check(MdoMcpCatalogFind(Catalog,"legacy",&Legacy)&&!strcmp(Legacy.Program,"./legacy-tool.exe"),"legacy-relative-preserved");
     bool Found=false;for(size_t I=0;I<MdoMcpCatalogCount(Catalog);I++)if(MdoMcpCatalogAt(Catalog,I,&Info)&&!strcmp(Info.Id,"mock")){Found=true;break;}
     Check(Found,"directory-discovered");
     Check(Info.Program&&xrtPathIsAbs(Info.Program)&&strstr(Info.Program,"tool.exe"),"program-anchored");

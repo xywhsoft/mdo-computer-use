@@ -15,6 +15,8 @@ import urllib.request
 import zlib
 
 ROOT=Path(__file__).resolve().parents[1]
+def default_host():
+    return next((p for p in (ROOT/".build/host/xs.exe",ROOT/".build/mcp-directory-host/xsw.exe") if p.is_file()),ROOT/".build/host/xs.exe")
 
 
 def payload(path,data):
@@ -42,11 +44,12 @@ class NativeApp:
         self.probe.write_text('#define MDO_BUILD_ID 70000057u\n#include "generated/mdo_unity.c"\n')
         with socket.socket() as s:s.bind(("127.0.0.1",0));self.port=s.getsockname()[1]
         self.config.write_text(json.dumps(dict(services=[dict(enabled=True,**{"class":"http"},name="mcp-directory",ip="127.0.0.1",port=self.port,
+            recv_limit=104988672,body_limit=104873984,
             host_default=dict(enabled=True,name="mdo",path="web",devlang="c",devfile="generated/mcp_directory_app_test.c"))])))
         self.token="";self.child=None
     def request(self,path,body=None,status=200,revision=None,method=None):
         headers={"Content-Type":"application/json"}
-        if body is not None:headers["X-Mdo-Write-Token"]=self.token
+        if body is not None or method in ("PUT","POST","DELETE"):headers["X-Mdo-Write-Token"]=self.token
         if revision:headers["If-Match"]='"'+revision+'"'
         req=urllib.request.Request(f"http://127.0.0.1:{self.port}/api/v1"+path,
             data=json.dumps(body,ensure_ascii=False).encode() if body is not None else None,headers=headers,method=method)
@@ -65,7 +68,14 @@ class NativeApp:
             except (OSError,AssertionError):time.sleep(.1)
         self.close();raise AssertionError((self.base/"runtime.log").read_text(errors="replace")[-12000:])
     def close(self):
-        if self.child and self.child.poll() is None:self.child.terminate()
+        if self.child and self.child.poll() is None:
+            try:
+                for item in self.request("/mcp").get("items",[]):
+                    if item.get("connected"):self.request("/mcp/"+item["id"]+"/disconnect",method="POST")
+            except (OSError,AssertionError):pass
+            if self.child.poll() is None:
+                if os.name=="nt":subprocess.run(["taskkill","/PID",str(self.child.pid),"/T","/F"],capture_output=True)
+                else:self.child.terminate()
         if self.child:self.child.wait(timeout=8)
         if hasattr(self,"log"):self.log.close()
         self.config.unlink(missing_ok=True);self.probe.unlink(missing_ok=True)
@@ -73,7 +83,7 @@ class NativeApp:
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument("--host",type=Path,default=Path("D:/GIT/mdo/.build/host/xs.exe"));args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument("--host",type=Path,default=default_host());args=parser.parse_args()
     (ROOT/".build").mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="mcp-install-",dir=ROOT/".build") as raw:
         with NativeApp(Path(raw),args.host) as app:

@@ -232,7 +232,7 @@ export function createExtensionPanels() {
           await api.post(`${path(kind, item.id)}/enabled`, { enabled: !item.enabled }, revision(item));
         }));
         const controls = editable ? [edit, button(label("export", "导出"), () => exportItem(kind, item))] : [];
-        if(kind==="mcp"&&editable&&item.valid&&!item.path?.endsWith("/mcp.json"))controls.push(button("复制程序到 MCP 目录",()=>mcpDirectory.open(item)));
+        if(kind==="mcp"&&editable&&item.valid&&item.transport_type==="stdio"&&!item.path?.endsWith("/mcp.json"))controls.push(button("复制程序到 MCP 目录",()=>mcpDirectory.open(item)));
         if (["agents","subagents"].includes(kind)) controls.push(button("上下文预览",()=>openRolePlan({kind,id:item.id,owner:roots.get(kind)})));
         if (store && item.valid && item.shareable!==false && editable && !(kind==="agents"&&item.id==="default")) controls.push(button("分享到创作中心", () => store.publish(item, owner)));
         if (store) controls.push(...store.localActions(owner));

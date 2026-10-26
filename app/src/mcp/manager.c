@@ -1109,11 +1109,15 @@ static bool MdoMcpResolveDirectory(const MdoMcpSource* Source,MdoMcpServerEntry*
         (strchr(Entry->Program,'/')||strchr(Entry->Program,'\\'));
     bool RelativeCwd=Entry->WorkingDirectory&&!xrtPathIsAbs(Entry->WorkingDirectory);
     if(!Relative&&!RelativeCwd)return true;
-    cstr ProgramTail=Entry->Program;if(Relative&&!strncmp(ProgramTail,"./",2))ProgramTail+=2;
-    if(Relative&&!MdoPackagePath(ProgramTail)){snprintf(Error,MDO_MCP_ERROR_LIMIT,"MCP program must stay inside its directory");return false;}
     if(!Source->RelativePath)return true;
     size_t N=strlen(Source->RelativePath);
-    if(N<9||strcmp(Source->RelativePath+N-9,"/mcp.json")||!Source->External){snprintf(Error,MDO_MCP_ERROR_LIMIT,"Relative MCP entries require a local <id>/mcp.json directory");return false;}
+    if(N<9||strcmp(Source->RelativePath+N-9,"/mcp.json")){
+        if(RelativeCwd){snprintf(Error,MDO_MCP_ERROR_LIMIT,"Legacy MCP working directories must be absolute or use mdo-home:");return false;}
+        return true; /* Existing file configurations retain their cwd/PATH semantics. */
+    }
+    if(!Source->External){snprintf(Error,MDO_MCP_ERROR_LIMIT,"Relative MCP entries require a local <id>/mcp.json directory");return false;}
+    cstr ProgramTail=Entry->Program;if(Relative&&!strncmp(ProgramTail,"./",2))ProgramTail+=2;
+    if(Relative&&!MdoPackagePath(ProgramTail)){snprintf(Error,MDO_MCP_ERROR_LIMIT,"MCP program must stay inside its directory");return false;}
     char* Directory=xrtStrDupN(Source->RelativePath,N-9);
     char* Native=Directory?MdoHomeExternalPath(Directory):NULL;
     xroot Root=Native?xrtRootOpen(Native):NULL;bool Ok=Root!=NULL;

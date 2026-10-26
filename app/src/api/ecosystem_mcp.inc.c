@@ -54,8 +54,7 @@ static bool EcoMcpStopChanged(const xvalue* Files,char* Error)
 {
     for(size_t I=0;I<xrtValueCount(Files);I++){cstr P=MdoPackageText(xrtValueArrayGet(Files,I),"path",599);if(!P||strncmp(P,"mcp/",4))continue;
         cstr Slash=strchr(P+4,'/');if(!Slash||Slash-P-4>64)continue;char Id[65];memcpy(Id,P+4,Slash-P-4);Id[Slash-P-4]=0;
-        MdoMcpServerStatus S={0};S.Size=sizeof(S);xwork_error E={0};
-        if(MdoMcpManagerGetStatus(Id,&S)&&S.Connected&&!MdoMcpManagerDisconnect(Id,&E)){snprintf(Error,1024,"MCP %s is busy; stop its active request before changing program files",Id);return false;}}
+        if(!McpDirectoryStopConnections(Id,Error))return false;}
     return true;
 }
 static bool EcoMcpDisableRemoved(xvalue* Files,const xvalue* Resources,const xvalue* Owned)

@@ -89,6 +89,15 @@ static bool MdoPackageSamePath(const char* a,const char* b)
 {
     for(;*a&&*b;a++,b++){unsigned char x=*a,y=*b;if(x>='A'&&x<='Z')x+=32;if(y>='A'&&y<='Z')y+=32;if(x!=y)return false;}return *a==*b;
 }
+/* Package and recovery sizes have explicit budgets; the general JSON helper
+ * intentionally defaults to a smaller output limit. */
+static char* MdoPackageStringify(const xvalue* Value,size_t Limit,size_t* Size)
+{
+    xjsonwriteconfig C;xrtJsonWriteConfigInit(&C);C.MaxOutputBytes=Limit;
+    xjsonwriter* W=xrtJsonWriterCreate(&C);char* Text=NULL;
+    if(W&&xrtJsonWriterValue(W,Value)&&xrtJsonWriterFinish(W))Text=xrtJsonWriterTake(W,Size);
+    xrtJsonWriterFree(W);return Text;
+}
 #include "mcp_directory.h"
 #include "mcp_template.h"
 #include "knowledge_format.h"
@@ -180,7 +189,7 @@ static bool MdoPackageValidate(const xvalue* package,char* error,size_t capacity
             xrtValueRelease(doc);if(!ok){if(error&&capacity)snprintf(error,capacity,"%s",why);return false;}
         }
     }
-    {int64 largeBuild=0;size_t size=0;char* json=xrtJsonStringify(package,false,&size);bool bounded=json&&size<=(v2?MDO_PACKAGE_LIMIT:MDO_PACKAGE_V1_LIMIT);xrtFree(json);
+    {int64 largeBuild=0;size_t size=0;char* json=MdoPackageStringify(package,MDO_PACKAGE_LIMIT,&size);bool bounded=json&&size<=(v2?MDO_PACKAGE_LIMIT:MDO_PACKAGE_V1_LIMIT);xrtFree(json);
         if(v2&&size>6u*1024u*1024u&&(!MdoPackageNumber(m,"min_build_id",&largeBuild)||largeBuild<MDO_PACKAGE_LARGE_MIN_BUILD)){reason="Large packages require a newer client build";goto bad;}
         if(!bounded){reason="Package JSON exceeds its format limit";goto bad;}}
     return true;

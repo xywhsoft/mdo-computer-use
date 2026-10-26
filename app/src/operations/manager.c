@@ -321,8 +321,8 @@ static xtaskoutcome MdoOperationRun(xcancel* Cancel, ptr Data,
         memset(&Server, 0, sizeof(Server)); Server.Size = sizeof(Server);
         memset(&Status, 0, sizeof(Status)); Status.Size = sizeof(Status);
         memset(&Error, 0, sizeof(Error));
-        if ( Catalog == NULL ||
-             !MdoMcpCatalogFind(Catalog, Job->Target, &Server) ) {
+        bool Personal=Catalog&&MdoMcpCatalogFind(Catalog,Job->Target,&Server);
+        if ( !Personal && !MdoMcpManagerGetStatus(Job->Target,&Status) ) {
             MdoMcpCatalogRelease(Catalog);
             MdoOperationFinishMcp(Job->Id, MDO_OPERATION_FAILED, NULL,
                 "MCP server does not exist in the active catalog",
@@ -330,6 +330,11 @@ static xtaskoutcome MdoOperationRun(xcancel* Cancel, ptr Data,
             MdoOperationError("MCP refresh target does not exist");
             return XTASK_FAILED;
         }
+        /* Project instances live in the runtime's scoped source, rather than
+         * the personal file catalog. Their clients still enforce their own
+         * configured phase limits; use the configuration ceiling as an outer
+         * operation bound when those private definitions are not in Catalog. */
+        if(!Personal){Server.StartupTimeoutMilliseconds=300000u;Server.RequestTimeoutMilliseconds=300000u;}
         /* A cold server initializes before tools/list. Its startup allowance
          * must survive a shorter per-request limit; xwork still enforces each
          * phase's own limit and this shared scope bounds the whole operation. */

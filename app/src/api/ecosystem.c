@@ -69,7 +69,7 @@ static bool EcoDownloadSource(xvalue* Data,MdoAccountLease* Lease,xcancel* Cance
 }
 static bool EcoUploadSource(xvalue* Input,MdoAccountLease* Lease,xcancel* Cancel,uint16* Status,char* Error,size_t Capacity)
 {
-    const xvalue* P=xrtValueObjectGet(Input,XRT_STR_LITERAL("package"));size_t Size=0;char* Json=xrtJsonStringify(P,false,&Size);char Hash[65],Upload[33]={0};
+    const xvalue* P=xrtValueObjectGet(Input,XRT_STR_LITERAL("package"));size_t Size=0;char* Json=MdoPackageStringify(P,MDO_PACKAGE_LIMIT,&Size);char Hash[65],Upload[33]={0};
     bool Ok=Json&&MdoExtensionHashBytes(Json,Size,Hash);xvalue* B=Ok?xrtValueObject():NULL;
     if(B){MdoApiValueSetString(B,"action","begin");MdoApiValueSetString(B,"purpose","package");MdoApiValueSetString(B,"sha256",Hash);xrtValueObjectSetNew(B,XRT_STR_LITERAL("size"),xrtValueUInt(Size));}
     xvalue* R=Ok?EcoService("/api/v1/mdo/cli/upload","POST",B,Lease,Cancel,Status,Error,Capacity):NULL;xrtValueRelease(B);Ok=R!=NULL;
@@ -116,7 +116,7 @@ static bool EcoHandleInput(MdoApiContext* c,xvalue* input)
         bool Planning=!strcmp(action,"plan");xvalue* Consent=Planning?xrtValueClone(input):NULL;if(Consent)MdoApiValueSetBool(Consent,"trust_code",true);
         const xvalue* package=xrtValueObjectGet(data,XRT_STR_LITERAL("package"));char error[256];bool compatible=MdoEcosystemPackageCompatible(package,Consent?Consent:input,error,sizeof(error));xrtValueRelease(Consent);
         cstr state=MdoPackageText(data,"state",16);compatible=compatible&&state&&!strcmp(state,"published");
-        size_t n=0;char* json=xrtJsonStringify(package,false,&n);char hash[65];cstr expected=MdoPackageText(data,"sha256",64);compatible=compatible&&json&&expected&&MdoExtensionHashBytes(json,n,hash)&&!strcmp(hash,expected);xrtFree(json);
+        size_t n=0;char* json=MdoPackageStringify(package,MDO_PACKAGE_LIMIT,&n);char hash[65];cstr expected=MdoPackageText(data,"sha256",64);compatible=compatible&&json&&expected&&MdoExtensionHashBytes(json,n,hash)&&!strcmp(hash,expected);xrtFree(json);
         bool result;
         if(!compatible)result=MdoApiReplyError(c,409,"ecosystem_incompatible","Package is unpublished, incompatible, unverified, or C code approval is required",NULL);
         else {xvalue* local=xrtValueObject();MdoApiValueSetString(local,"action",Planning?"plan":"install");xrtValueObjectSet(local,XRT_STR_LITERAL("entry"),data);

@@ -188,8 +188,6 @@ static bool MdoApiReplyValue(MdoApiContext* pContext, uint16 Status,
 
     if ( pEnvelope == NULL )
         return MdoApiReplySerializationFailure(pContext, 500u);
-    Json = xrtJsonStringify(pEnvelope, false, &JsonSize);
-    xrtValueRelease(pEnvelope);
     /* Community source downloads are bounded separately from ordinary API
      * envelopes; all other routes retain their existing small response cap. */
     size_t Limit = xrtStrEqual(pContext->Target.Path,xrtStrView("/api/v1/ecosystem"))
@@ -201,6 +199,10 @@ static bool MdoApiReplyValue(MdoApiContext* pContext, uint16 Status,
     /* Skill documents can contain 128 KiB of text; JSON escaping needs extra room. */
     if((pContext->Target.Path.Size>=14u&&!memcmp(pContext->Target.Path.Data,"/api/v1/skills",14u))||
         (pContext->Target.Path.Size>=25u&&!memcmp(pContext->Target.Path.Data,"/api/v1/extensions/skills",25u)))Limit=1024u*1024u;
+    xjsonwriteconfig Config;xrtJsonWriteConfigInit(&Config);Config.MaxOutputBytes=Limit;
+    xjsonwriter* Writer=xrtJsonWriterCreate(&Config);Json=NULL;
+    if(Writer&&xrtJsonWriterValue(Writer,pEnvelope)&&xrtJsonWriterFinish(Writer))Json=xrtJsonWriterTake(Writer,&JsonSize);
+    xrtJsonWriterFree(Writer);xrtValueRelease(pEnvelope);
     if ( Json == NULL || JsonSize > Limit ) {
         xrtFree(Json);
         return MdoApiReplySerializationFailure(pContext, 500u);

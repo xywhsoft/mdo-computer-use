@@ -16,6 +16,7 @@ static xmutex* g_MdoExtensionLock;
 static const xvalue* McpConnectionBinding(const xvalue*);
 static bool McpConnectionCredits(xvalue*,const xvalue*);
 static bool McpConnectionReferenced(cstr);
+static bool McpDirectoryStopConnections(cstr,char*);
 static xvalue* McpConnectionResolve(const xvalue*,const xvalue*,unsigned);
 static xvalue* KnowledgeCurrentFiles(cstr);
 static bool KnowledgeWrite(MdoApiContext*,cstr);
@@ -178,6 +179,8 @@ static xvalue* ExtensionItemRecord(cstr Kind,cstr Id,bool IncludeSource,const xv
         if (!Ok) goto fail;
     }
     if (!strcmp(Kind,"mcp")) {
+        cstr Type=Doc?MdoPackageText(xrtValueObjectGet(Doc,XRT_STR_LITERAL("transport")),"type",32):NULL;
+        if(!MdoApiValueSetString(Item,"transport_type",Type?Type:""))goto fail;
         if(!MdoApiValueSetBool(Item,"has_oauth",Doc&&xrtValueObjectHas(Doc,XRT_STR_LITERAL("oauth"))))goto fail;
         MdoMcpServerStatus Status={0}; Status.Size=sizeof(Status);
         if (MdoMcpManagerGetStatus(Id,&Status)) {
@@ -535,8 +538,7 @@ static bool ExtensionDelete(MdoApiContext* C,cstr Kind,cstr Id,cstr Path,cstr Ol
     bool External; xfileinfo Info; char Directory[160],Trash[190],Hash[65]; bool Moved=false,Ok;
     if (!MdoHomeExternalStat(Path,&External,&Info) || !External) return MdoApiReplyError(C,409,"builtin_resource","Built-in files cannot be deleted; disable or customize them instead",NULL);
     if (!strcmp(Kind,"skills")||!strcmp(Kind,"knowledge")||(!strcmp(Kind,"mcp")&&strstr(Path,"/mcp.json"))) {
-        if(!strcmp(Kind,"mcp")){MdoMcpServerStatus S={0};S.Size=sizeof(S);xwork_error E={0};
-            if(MdoMcpManagerGetStatus(Id,&S)&&S.Connected&&!MdoMcpManagerDisconnect(Id,&E))return MdoApiReplyError(C,409,"mcp_busy","Stop the active MCP request before deleting its directory",NULL);}
+        if(!strcmp(Kind,"mcp")){char Error[1024]={0};if(!McpDirectoryStopConnections(Id,Error))return MdoApiReplyError(C,409,"mcp_busy",Error,NULL);}
         snprintf(Directory,sizeof(Directory),"%s/%s",Kind,Id); MdoExtensionHash(Old,Hash);
         snprintf(Trash,sizeof(Trash),"%s/.deleted-%s-%.12s",Kind,Id,Hash);
         if (!MdoHomeRenameNoReplace(Directory,Trash)) goto failed;

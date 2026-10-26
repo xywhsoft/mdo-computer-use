@@ -84,6 +84,50 @@ static bool McpConnectionReferenced(cstr Reference)
     for(size_t i=0;!Found&&i<Count;i++)Found=McpConnectionScopeReference(Reference,Projects[i].WorkspaceRoot);
     return Found;
 }
+static bool McpDirectoryContains(cstr Directory,cstr Program)
+{
+    if(!Program||!xrtPathIsAbs(Program))return false;char* Relative=xrtPathRelative(xrtStrView(Directory),xrtStrView(Program),XPATH_NATIVE);
+    if(Relative)for(char* P=Relative;*P;P++)if(*P=='\\')*P='/';bool Inside=Relative&&MdoPackagePath(Relative);xrtFree(Relative);return Inside;
+}
+static bool McpDirectoryStopRuntime(cstr Id,char* Error)
+{
+    MdoMcpServerStatus S={0};S.Size=sizeof(S);xwork_error E={0};
+    if(MdoMcpManagerGetStatus(Id,&S)&&S.Connected&&!MdoMcpManagerDisconnect(Id,&E)){snprintf(Error,1024,"MCP %s is busy; stop its active request before changing program files",Id);return false;}return true;
+}
+static bool McpDirectoryStopProject(cstr Bundle,cstr Directory,cstr Workspace,char* Error)
+{
+    char* Absolute=xrtPathAbs(Workspace);xroot Root=Absolute?xrtRootOpen(Absolute):NULL;
+    if(!Root){bool Missing=xrtGetError()&&xrtErrorKind(xrtGetError())==XERR_NOT_FOUND;xrtFree(Absolute);xrtClearError();return Missing;}
+    xdir Dir=xrtRootDirOpen(Root,".mdo/mcp",XDIR_STAT);bool Ok=Dir!=NULL;
+    if(!Dir){Ok=xrtGetError()&&xrtErrorKind(xrtGetError())==XERR_NOT_FOUND;xrtClearError();}
+    char Hash[65];Ok=Ok&&MdoExtensionHash(Absolute,Hash);xdirentry E;xdirnext Next=XDIR_NEXT_END;size_t Count=0;
+    while(Ok&&Dir&&(Next=xrtDirNext(Dir,&E))==XDIR_NEXT_ITEM){if(E.Info.Type!=XFILE_TYPE_FILE||E.Name.Size<=5||E.Name.Size>69||memcmp(E.Name.Data+E.Name.Size-5,".json",5))continue;
+        if(++Count>128){Ok=false;break;}char Path[160],Id[65];memcpy(Id,E.Name.Data,E.Name.Size-5);Id[E.Name.Size-5]=0;
+        if(!MdoExtensionIdValid(Id))continue;snprintf(Path,sizeof(Path),".mdo/mcp/%s.json",Id);bool Missing=false;char* Text=SkillRead(Root,Path,&Missing);
+        xvalue* D=Text?xrtJsonParse(xrtStrView(Text)):NULL;const xvalue* T=xrtValueObjectGet(McpConnectionBinding(D),XRT_STR_LITERAL("template"));
+        cstr TemplateId=MdoPackageText(T,"id",64),Program=MdoPackageText(xrtValueObjectGet(D,XRT_STR_LITERAL("transport")),"program",4096);
+        bool Uses=(MdoMcpDirectoryTemplate(T)&&TemplateId&&!strcmp(TemplateId,Bundle))||McpDirectoryContains(Directory,Program);
+        if(!D&&!Missing)Ok=false;
+        if(Ok&&Uses){char Runtime[129];snprintf(Runtime,sizeof(Runtime),"mdo-project-%.16s.%s",Hash,Id);Ok=McpDirectoryStopRuntime(Runtime,Error);}
+        xrtValueRelease(D);xrtFree(Text);
+    }if(Next==XDIR_NEXT_ERROR)Ok=false;xrtDirClose(Dir);xrtRootClose(Root);xrtFree(Absolute);return Ok;
+}
+/* Package updates retire all connections using this program tree, including
+ * aliases and project instances; unrelated MCP processes remain connected. */
+static bool McpDirectoryStopConnections(cstr Id,char* Error)
+{
+    char Relative[160];snprintf(Relative,sizeof(Relative),"mcp/%s",Id);char* Directory=MdoHomeExternalPath(Relative);if(!Directory)return false;
+    MdoMcpCatalog* Catalog=MdoMcpCatalogSnapshot();bool Ok=true;
+    for(size_t I=0;Ok&&I<MdoMcpCatalogCount(Catalog);I++){MdoMcpServerInfo Info={0};Info.Size=sizeof(Info);
+        if(MdoMcpCatalogAt(Catalog,I,&Info)&&McpDirectoryContains(Directory,Info.Program))Ok=McpDirectoryStopRuntime(Info.Id,Error);}
+    MdoMcpCatalogRelease(Catalog);
+    MdoProjectInfo Projects[MDO_PROJECT_LIST_LIMIT];size_t Count=0,Invalid=0;bool Truncated=false;xwork_error E={0};
+    Ok=Ok&&MdoProjectList(Projects,MDO_PROJECT_LIST_LIMIT,&Count,&Invalid,&Truncated,&E)&&!Invalid&&!Truncated;
+    char* Default=Ok?MdoHomeDefaultWorkspacePath(false):NULL;
+    if(Default)Ok=McpDirectoryStopProject(Id,Directory,Default,Error);xrtFree(Default);
+    for(size_t I=0;Ok&&I<Count;I++)Ok=McpDirectoryStopProject(Id,Directory,Projects[I].WorkspaceRoot,Error);
+    xrtFree(Directory);if(!Ok&&!Error[0])snprintf(Error,1024,"Cannot inspect MCP connections before changing program files");return Ok;
+}
 static void McpConnectionCleanTemplate(const xvalue* Old)
 {
     const xvalue* B=McpConnectionBinding(Old),*Files=xrtValueObjectGet(xrtValueObjectGet(B,XRT_STR_LITERAL("receipt")),XRT_STR_LITERAL("files"));bool Known=false;xvalue* Records=ExtensionStoreRead(&Known);

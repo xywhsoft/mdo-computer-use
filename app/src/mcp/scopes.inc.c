@@ -56,7 +56,7 @@ static bool MdoMcpConfigureSelection(xwork_agent* Agent,cstr Workspace,
                 Shadow[ShadowCount++]=Id;
                 char Path[96];snprintf(Path,sizeof(Path),".mdo/mcp/%s.json",Id);
                 char* Text=Item.Info.Type==XFILE_TYPE_FILE?MdoMcpProjectRead(Root,Path):NULL;
-                MdoMcpSource Input={0};Input.Id=Id;
+                MdoMcpSource Input={0};Input.Id=Id;Input.RelativePath=Path;Input.External=true;
                 MdoMcpServerEntry Entry={0};Entry.External=true;
                 MdoMcpDiagnosticStage Stage=MDO_MCP_DIAGNOSTIC_PARSE;char Message[1024]={0};
                 bool Valid=Text&&MdoMcpParseServer(&Input,Text,strlen(Text),&Entry,&Stage,Message);
