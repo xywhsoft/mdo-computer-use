@@ -16,6 +16,9 @@ from .driver import LOCK, verify
 class NativeTransport:
     """Test-only harness in this checkout's existing native host executable."""
 
+    def __init__(self, grant_existing_profile=False):
+        self.grant_existing_profile = grant_existing_profile
+
     def __enter__(self):
         driver = verify(STATE / "cua" / LOCK["version"])
         write_json(ROOT / "xs.json", {"services": [{"enabled": True, "class": "http",
@@ -24,6 +27,9 @@ class NativeTransport:
                              "devlang": "c", "devfile": "tests/fixtures/computer-use-transport.c"}}]})
         self.capture = STATE / "native-transport-last.png"
         env = dict(os.environ, MDO_CUA_DRIVER=str(driver), MDO_CUA_CAPTURE=str(self.capture))
+        env.pop("MDO_CUA_TEST_GRANT", None)
+        if self.grant_existing_profile:
+            env["MDO_CUA_TEST_GRANT"] = "1"
         self.log = (STATE / "native-transport.log").open("w", encoding="utf-8")
         self.process = subprocess.Popen([str(ROOT / ".build/host/xs.exe"), str(ROOT / "xs.json")],
             cwd=ROOT, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

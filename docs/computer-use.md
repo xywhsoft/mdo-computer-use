@@ -52,6 +52,18 @@ python -m computer_use run
 该命令仅修改此开发 Home 中的 `cua-driver` 连接。`--replace` 会覆盖该连接的
 现有参数，应在明确需要恢复本项目默认配置时使用。
 
+默认「Windows 桌面」方案使用 Cua 标准权限，可使用普通桌面和临时浏览器工具。
+附加已有登录的 Chrome/Edge 等 Chromium 配置时，Cua 还需要运行实例级授权。
+在创建连接时明确选择「Windows 桌面及现有浏览器（显式授权）」方案，预览中会显示
+官方参数 `--grant existing-profile`。授权范围是 Cua 的现有浏览器附加能力，
+权限模式仍为 standard。mdo 的普通工具批准与这项授权分别生效。
+
+命令行对应配置为（同样须在本目录 mdo 停止时执行）：
+
+```powershell
+python -m computer_use configure --enable --replace --grant-existing-profile
+```
+
 ## 模板分发与扩展系统
 
 生成的 `.build/computer-use/computer-use.mdo-extension.json` 是普通
@@ -94,10 +106,12 @@ python -m computer_use smoke
 python -m computer_use probe
 python -m computer_use verify-template
 python -m computer_use transport-check
+python -m computer_use transport-check --scope browser-grant
 python tests/test_computer_use_catalog.py
 python tests/test_computer_use_responses.py
 python -m unittest discover -s tests -p test_computer_use.py
 python -m computer_use acceptance --scope desktop
+python -m computer_use acceptance --scenario click
 python -m computer_use acceptance --scope browser
 ```
 
@@ -115,6 +129,10 @@ python -m computer_use acceptance --scope browser
 
 当前实际结果、提交阶段和未通过项见 [验收记录](../COMPUTER_USE.md)。
 普通工具调用成功、截图进入会话和模型完成任务是不同的验收条件。
+当前默认 Responses 路径已通过独立的单击及读图真实闭环，耗时 172.62 秒。
+完整表单和浏览器自主任务仍未通过，详见记录；确定性桌面/浏览器测试均通过。
+现有浏览器授权检查仅操作本目录创建的空测试配置，验证未授权拒绝、明确授权后
+输入与截图成功、断开不终止外部浏览器，最后清理此测试配置。
 
 ## 升级与跨平台
 

@@ -230,6 +230,25 @@ python -m computer_use acceptance --scenario click
 This establishes a real model/action/visual-feedback loop without additional
 prompts or retries. It does not make the failed form or browser tasks pass.
 
+### Stage 13 — explicit official existing-browser authorization
+
+The 0.1.1 service template adds a separate `windows-existing-profile` variant
+using official `mcp --direct --grant existing-profile`. The original variant
+remains standard and ungranted. The CLI exposes the same explicit choice with
+`configure --grant-existing-profile`; it never enables this grant implicitly.
+The public package still contains only one MCP template and no Cua changes.
+
+Both variants pass real mdo preview/save-disabled/delete validation. A separate
+owned empty Chrome profile verifies 7 checks: refusal without the grant,
+attachment with the explicit grant, Unicode input, exact binding, screenshot,
+preservation of the externally owned browser on disconnect, and removal of
+the test profile after the runner closes it. This test does not attach to a
+personal profile or enable remote debugging in the user's browser.
+
+```powershell
+python -m computer_use transport-check --scope browser-grant
+```
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Build this checkout's

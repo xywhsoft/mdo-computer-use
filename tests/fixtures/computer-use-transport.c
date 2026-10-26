@@ -18,9 +18,10 @@ static void Emit(const char* Prefix,xvalue* Value) {
 }
 void ServiceInit(XS_HostInfo* Host) {
     xwork_mcp_stdio_config Config;xwork_error Error;xwork_agent_config AgentConfig;
-    const char* Args[]={"mcp","--direct"};char Tool[256],Json[262144];(void)Host;
+    const char* Args[]={"mcp","--direct","--grant","existing-profile"};char Tool[256],Json[262144];(void)Host;
     xworkMcpStdioConfigInit(&Config);Config.sServerName="cua-driver";
-    Config.sProgram=getenv("MDO_CUA_DRIVER");Config.psArguments=Args;Config.iArgumentCount=2;
+    Config.sProgram=getenv("MDO_CUA_DRIVER");Config.psArguments=Args;
+    Config.iArgumentCount=getenv("MDO_CUA_TEST_GRANT")?4:2;
     Config.sProtocolVersion="2026-07-28";Config.iMaxMessageBytes=16777216;
     Config.iMaxTools=256;Config.uStartupTimeoutMs=10000;Config.uRequestTimeoutMs=30000;
     xwork_mcp_client* Client=xworkMcpClientCreate(&Config,&Error);

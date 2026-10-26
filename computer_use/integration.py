@@ -56,19 +56,24 @@ def verify_template(app) -> dict:
     from .driver import LOCK, verify
     installed = install_template(app)
     binary = verify(STATE / "cua" / LOCK["version"])
-    body = {"id": "computer-use-template-check", "action": "preview",
-            "receipt_key": installed["item"]["receipt"]["key"], "variant": "windows",
-            "values": {"driver-path": str(binary)}, "confirm_launch": True}
-    headers = {"If-Match": '"new"'}
-    preview = app.request("/api/v1/mcp/connections", "POST", body, headers)["data"]
-    if preview["config"]["enabled"] or preview["config"]["transport"]["program"] != str(binary):
-        raise RuntimeError("Template did not produce the expected disabled local connection")
-    saved = app.request("/api/v1/mcp/connections", "POST", dict(body, action="save"), headers)["data"]
-    try:
-        if saved["enabled"] or not saved["template_connection"]:
-            raise RuntimeError("Native template binding was not preserved")
-        return {"preview": True, "saved_disabled": True, "template_connection": True,
-                "program_binding": True, "removed_after_check": True}
-    finally:
-        app.request("/api/v1/mcp/connections", "POST", {"id": body["id"], "action": "delete"},
-                    {"If-Match": '"' + saved["revision"] + '"'})
+    checked = []
+    for variant in ("windows", "windows-existing-profile"):
+        body = {"id": "computer-use-template-check", "action": "preview",
+                "receipt_key": installed["item"]["receipt"]["key"], "variant": variant,
+                "values": {"driver-path": str(binary)}, "confirm_launch": True}
+        headers = {"If-Match": '"new"'}
+        preview = app.request("/api/v1/mcp/connections", "POST", body, headers)["data"]
+        config = preview["config"]
+        expected = ["mcp", "--direct"] + (["--grant", "existing-profile"] if variant != "windows" else [])
+        if config["enabled"] or config["transport"]["program"] != str(binary) or config["transport"]["arguments"] != expected:
+            raise RuntimeError("Template did not produce the expected disabled local connection")
+        saved = app.request("/api/v1/mcp/connections", "POST", dict(body, action="save"), headers)["data"]
+        try:
+            if saved["enabled"] or not saved["template_connection"]:
+                raise RuntimeError("Native template binding was not preserved")
+            checked.append(variant)
+        finally:
+            app.request("/api/v1/mcp/connections", "POST", {"id": body["id"], "action": "delete"},
+                        {"If-Match": '"' + saved["revision"] + '"'})
+    return {"preview": True, "saved_disabled": True, "template_connection": True,
+            "program_binding": True, "removed_after_check": True, "variants": checked}

@@ -18,6 +18,15 @@ class ComputerUsePackage(unittest.TestCase):
         self.assertEqual(config["transport"]["arguments"], ["mcp", "--direct"])
         self.assertNotIn(str(Path.cwd()), json.dumps(package))
 
+    def test_existing_browser_grant_is_a_separate_explicit_variant(self):
+        template = json.loads(driver.extension_package()["resources"][0]["content"])
+        variants = {v["id"]: v for v in template["variants"]}
+        ordinary = variants["windows"]["config"]["transport"]["arguments"]
+        granted = variants["windows-existing-profile"]["config"]["transport"]["arguments"]
+        self.assertNotIn("--grant", ordinary)
+        self.assertEqual(granted, ordinary + ["--grant", "existing-profile"])
+        self.assertNotIn("--dangerously-bypass-approvals", granted)
+
     def test_unverified_archive_cannot_create_install(self):
         # Reuse an existing tiny source file as invalid input, without temporary
         # copies of the app or official 94 MiB driver.
@@ -38,9 +47,12 @@ class ComputerUsePackage(unittest.TestCase):
         binary = driver.install(STATE)
         first = driver.connection(binary, True)
         second = driver.connection(binary)
+        granted = driver.connection(binary, grant_existing_profile=True)
         self.assertTrue(first["enabled"])
         self.assertFalse(second["enabled"])
         self.assertEqual(first["transport"]["program"], str(binary))
+        self.assertEqual(granted["transport"]["arguments"], ["mcp", "--direct", "--grant", "existing-profile"])
+        self.assertEqual(second["transport"]["arguments"], ["mcp", "--direct"])
 
 
 if __name__ == "__main__":

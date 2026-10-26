@@ -77,12 +77,13 @@ def install(root: Path, archive: Path | None = None) -> Path:
     return verify(target)
 
 
-def connection(driver: Path, enabled: bool = False) -> dict:
+def connection(driver: Path, enabled: bool = False, grant_existing_profile: bool = False) -> dict:
     driver = driver.resolve(strict=True)
     if verify(driver.parent) != driver:
         raise ValueError("Choose the official cua-driver.exe entry point")
     template = json.loads((PACKAGE / "template.json").read_text(encoding="utf-8"))
-    config = template["variants"][0]["config"]
+    variant = "windows-existing-profile" if grant_existing_profile else "windows"
+    config = next(item["config"] for item in template["variants"] if item["id"] == variant)
     config.update(id="cua-driver", enabled=enabled)
     config["transport"]["program"] = str(driver)
     return config
@@ -93,7 +94,7 @@ def extension_package() -> dict:
     return {
         "format": "mdo.extension.v1",
         "manifest": {"slug": "mdo-computer-use", "name": "Computer Use（Cua Driver）",
-                     "version": "0.1.0", "description": "通过官方 Cua Driver 操作当前设备的桌面。",
+                     "version": "0.1.1", "description": "通过官方 Cua Driver 操作当前设备的桌面。",
                      "readme": "先解压官方 Cua Driver 0.38.0，再安装本模板并填写 cua-driver.exe 路径。启用后使用现有 Agent 和支持图片及工具调用的模型。模板不含驱动、账号凭据、Skill 或额外提示词。Windows 优先；控制的是运行 mdo 的设备。Cua 已知窗口映射和取消问题保留原样。",
                      "license": "MIT", "platforms": ["windows-x86_64"]},
         "resources": [{"kind": "mcp", "id": "cua-driver", "content": template}],

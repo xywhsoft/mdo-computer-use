@@ -149,6 +149,8 @@ def main() -> int:
     config_parser.add_argument("--driver", type=Path)
     config_parser.add_argument("--enable", action="store_true")
     config_parser.add_argument("--replace", action="store_true")
+    config_parser.add_argument("--grant-existing-profile", action="store_true",
+        help="Explicitly authorize official Cua to attach existing Chromium profiles")
     commands.add_parser("package", help="Build an importable mdo MCP service template")
     commands.add_parser("probe", help="Verify real mdo/Cua discovery and disconnect")
     commands.add_parser("install-template", help="Import the public template through the native mdo API")
@@ -160,7 +162,7 @@ def main() -> int:
     acceptance_parser.add_argument("--protocol", choices=("openai-responses", "openai-chat-completions", "anthropic-messages"))
     acceptance_parser.add_argument("--scenario", choices=("form", "click"), default="form")
     check_parser = commands.add_parser("transport-check", help="Exercise native Cua desktop/browser actions without a model")
-    check_parser.add_argument("--scope", choices=("desktop", "browser", "all"), default="all")
+    check_parser.add_argument("--scope", choices=("desktop", "browser", "browser-grant", "all"), default="all")
     for name in ("smoke", "run"):
         command = commands.add_parser(name)
         command.add_argument("--port", type=int, default=5391)
@@ -185,12 +187,14 @@ def main() -> int:
             return 0 if report["passed"] else 1
         elif args.command == "transport-check":
             from .transport_check import desktop
-            from .browser_check import run as browser
+            from .browser_check import run as browser, grant_check
             reports = {}
             if args.scope in ("desktop", "all"):
                 reports["desktop"] = desktop()
             if args.scope in ("browser", "all"):
                 reports["browser"] = browser()
+            if args.scope == "browser-grant":
+                reports["browser_grant"] = grant_check()
             write_json(STATE / "transport-check.json", reports)
             print(json.dumps(reports, ensure_ascii=False, indent=2))
             return 0 if all(r["passed"] for r in reports.values()) else 1
@@ -218,7 +222,7 @@ def main() -> int:
                     print(json.dumps(result, ensure_ascii=False, indent=2))
             else:
                 executable = args.driver or STATE / "cua" / driver.LOCK["version"] / "cua-driver.exe"
-                config = driver.connection(executable, args.enable)
+                config = driver.connection(executable, args.enable, args.grant_existing_profile)
                 path = HOME / "mcp/cua-driver.json"
                 if path.exists() and not args.replace and json.loads(path.read_text(encoding="utf-8")) != config:
                     raise ValueError("Connection already differs; use --replace to explicitly replace it")

@@ -4,6 +4,7 @@ from __future__ import annotations
 import http.server
 import json
 import socket
+import shutil
 import subprocess
 import sys
 import time
@@ -150,6 +151,82 @@ def model_acceptance(model="ornith-1.5-35b", timeout=300, protocol=None) -> dict
         report.update(passed=False, error=str(error))
     finally:
         write_json(STATE / ("browser-acceptance" + ("-" + protocol if protocol else "") + ".json"), report)
+    return report
+
+
+def grant_check() -> dict:
+    """Test official existing-profile authorization on an owned empty profile."""
+    import os
+    from pathlib import Path
+    chrome = next((Path(base) / "Google/Chrome/Application/chrome.exe" for base in
+                   (os.environ.get("ProgramFiles", ""), os.environ.get("ProgramFiles(x86)", ""))
+                   if (Path(base) / "Google/Chrome/Application/chrome.exe").is_file()), None)
+    if chrome is None:
+        raise RuntimeError("A system Google Chrome installation is required for this owned-profile test")
+    profile = STATE / "browser-grant-profile"
+    if profile.exists():
+        raise RuntimeError(f"Inspect the previous owned test profile before rerunning: {profile}")
+    profile.mkdir()
+    process = None
+    report = {"model": False, "checks": {}}
+    completed = False
+    try:
+        with PageServer():
+            process = subprocess.Popen([str(chrome), "--user-data-dir=" + str(profile),
+                "--remote-debugging-port=0", "--no-first-run", "--no-default-browser-check",
+                "--disable-component-update", "--new-window", URL], cwd=ROOT,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            with NativeTransport() as transport:
+                deadline = time.monotonic() + 10
+                while time.monotonic() < deadline:
+                    windows = transport.call("list_windows", {"pid": process.pid})["structured"]["windows"]
+                    if len(windows) == 1:
+                        break
+                    if process.poll() is not None:
+                        raise RuntimeError("Owned test browser exited before discovery")
+                    time.sleep(.1)
+                else:
+                    raise RuntimeError("Owned test browser window did not appear")
+                target = {"pid": process.pid, "window_id": windows[0]["window_id"],
+                          "session": "mdo-existing-profile-test"}
+                arguments = dict(target, strategy={"kind": "existing_profile"})
+                denied = transport.call("browser_prepare", arguments, require_success=False)
+                report["checks"]["ungranted_refused"] = "browser_consent_required" in denied["content"]
+            with NativeTransport(grant_existing_profile=True) as transport:
+                prepared = transport.call("browser_prepare", arguments)
+                report["checks"]["explicit_grant_accepted"] = prepared["structured"].get("prepared") is True
+                bound = transport.call("get_browser_state", target)["structured"]
+                tab = dict(session=target["session"], target_id=bound["target_id"],
+                           tab_id=bound["tabs"][0]["tab_id"])
+                state = transport.call("get_browser_state", dict(tab, include_screenshot=True))
+                field = next(r["ref"] for r in state["structured"]["refs"]
+                             if "id=message" in (r.get("label") or "").split())
+                transport.call("browser_type", dict(tab, ref=field, text="现有配置授权验收", replace=True))
+                time.sleep(.2)
+                actual = report["oracle"] = json.loads(ORACLE.read_text(encoding="utf-8"))
+                report["checks"].update(text=actual["text"] == "现有配置授权验收",
+                    exact_binding=bound["binding_quality"] == "exact", screenshot=state["image_bytes"] > 1000)
+            report["checks"]["external_browser_preserved"] = process.poll() is None
+            completed = True
+    finally:
+        if process is not None and process.poll() is None:
+            process.terminate()
+            process.wait(timeout=5)
+        # Delete only this call's new profile, after checking the final target.
+        resolved = profile.resolve()
+        if resolved.parent != STATE.resolve() or profile.is_symlink():
+            raise RuntimeError("Refusing cleanup outside this test's owned profile directory")
+        for attempt in range(50):
+            try:
+                shutil.rmtree(resolved)
+                break
+            except PermissionError:
+                if attempt == 49:
+                    raise
+                time.sleep(.1)
+        report["checks"]["owned_profile_removed"] = not profile.exists()
+        report["passed"] = completed and all(report["checks"].values())
+        write_json(STATE / "browser-grant-check.json", report)
     return report
 
 
