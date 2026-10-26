@@ -143,3 +143,11 @@ scope; mounted aliases remain confined and read-only effect ceilings still apply
 mdo pairs this scope with its synchronized approval state, so a live permission
 change updates both approval and native-path access without restarting an Agent.
 The additional opaque APIs leave ABI 8 and persisted session schemas unchanged.
+
+Responses function outputs now preserve structured text/image parts as the
+official typed output array. Plain content and one text part retain their
+existing string representation. Previously, multipart and image-only tool
+messages with no plain content were serialized as an empty string. The offline
+native test `tests/test_computer_use_responses.py` checks actual request JSON.
+This changes the generic xllm dialect in mdo's overlay; Cua is unchanged.
+Format reference: https://developers.openai.com/api/docs/guides/function-calling

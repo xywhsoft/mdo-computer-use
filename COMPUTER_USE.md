@@ -146,6 +146,15 @@ Responses function outputs. Run `python tests/test_computer_use_responses.py`;
 its initial expected failure captures the exact wire defect. The real model
 test remains incomplete until this generic host serialization path is fixed.
 
+### Stage 8 — multimodal Responses outputs retained
+
+The generic Responses serializer now emits typed output arrays for multipart
+and image-only tool results, as supported by the official function-calling
+format. Both existing string forms remain unchanged. All five native wire
+checks pass after rebuilding mdo 0.7.0. Catalog lifetime, readiness and the four
+package checks also pass. The overlay applies cleanly to its locked SDK base,
+and dependency hashes are updated. Real desktop/model acceptance follows next.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo

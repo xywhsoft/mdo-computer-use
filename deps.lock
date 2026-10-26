@@ -44,7 +44,7 @@
     "xllm": {
       "version": "3.1.0",
       "source_commit": "5d16ece2b049fd73eee1d8e79551d6d70c6be216",
-      "production_tree_sha256": "02e153e4f5778213c518ebb83a94551a0f0636ed7ffb6f0aba41a06e119abec2"
+      "production_tree_sha256": "15ff6bae3b7de2984df33a92b29a1a915d0ed3daca099b3ab158d1d47940f89d"
     },
     "xllm-session": {
       "version": "3.0.0-dev",
@@ -71,9 +71,9 @@
   },
   "sdk_overlay": {
     "path": "tools/dependencies/xwork-mcp.patch",
-    "sha256": "e25c4683514bf49137e1653739010ebc879b0422e294fa3eb274d1ca180e9983",
+    "sha256": "05d80e6aab33b9466c2b3b8815f3746584e78fcba0f759362f9e622c7585092d",
     "base_commit": "216f5445163ca30c815ad7d5d2da3b71cb2f6401",
-    "purpose": "MCP/platform compatibility, retained dynamic tool catalogs, native browser panels and symmetric role hooks",
+    "purpose": "MCP/platform compatibility, retained dynamic tool catalogs, multimodal Responses outputs, native browser panels and symmetric role hooks",
     "xrt_single_header_sha256": "36d536851fa9c09d82d4d0196b75f30beff38fe8799bf9c1b86b63eecba04c6a"
   }
 }
