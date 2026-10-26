@@ -13,6 +13,7 @@
 static HWND main_window, input, counter, check, combo, lines;
 static wchar_t oracle_path[1024];
 static int clicks, canvas_clicks, right_clicks;
+static unsigned int visual_code;
 static HFONT font;
 
 static void json_text(FILE *f, const wchar_t *wide) {
@@ -40,7 +41,8 @@ static void save_state(void) {
         (unsigned long long)(uintptr_t)GetForegroundWindow(),clicks,canvas_clicks,right_clicks,
         SendMessageW(check,BM_GETCHECK,0,0)==BST_CHECKED?"true":"false",
         (long)SendMessageW(lines,EM_GETFIRSTVISIBLELINE,0,0));
-    json_text(f,text); fputs(",\"selection\":",f); json_text(f,selected); fputs("}\n",f);
+    json_text(f,text); fputs(",\"selection\":",f); json_text(f,selected);
+    fprintf(f,",\"visual_code\":\"%06u\"}\n",visual_code);
     fclose(f); MoveFileExW(temporary,oracle_path,MOVEFILE_REPLACE_EXISTING);
 }
 static HWND child(const wchar_t *class_name,const wchar_t *text,DWORD style,int x,int y,int width,int height,int id) {
@@ -83,8 +85,11 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l) {
     case WM_PAINT: {
         PAINTSTRUCT paint;HDC dc=BeginPaint(h,&paint);RECT box={440,300,710,440};
         HBRUSH brush=CreateSolidBrush(RGB(213,235,255));FillRect(dc,&box,brush);DeleteObject(brush);FrameRect(dc,&box,(HBRUSH)GetStockObject(BLACK_BRUSH));
-        wchar_t label[100];swprintf(label,100,L"CANVAS TARGET\nLeft: %d  Right: %d",canvas_clicks,right_clicks);
-        SetBkMode(dc,TRANSPARENT);DrawTextW(dc,label,-1,&box,DT_CENTER|DT_VCENTER|DT_WORDBREAK);EndPaint(h,&paint);return 0;
+        wchar_t label[100];swprintf(label,100,L"CANVAS TARGET\nVisual code: %06u\nLeft: %d  Right: %d",visual_code,canvas_clicks,right_clicks);
+        HFONT visual_font=CreateFontW(23,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Segoe UI");
+        HGDIOBJ old_font=SelectObject(dc,visual_font);
+        SetBkMode(dc,TRANSPARENT);DrawTextW(dc,label,-1,&box,DT_CENTER|DT_VCENTER|DT_WORDBREAK);
+        SelectObject(dc,old_font);DeleteObject(visual_font);EndPaint(h,&paint);return 0;
     }
     case WM_DESTROY: KillTimer(h,1);save_state();PostQuitMessage(0);return 0;
     }
@@ -92,6 +97,7 @@ static LRESULT CALLBACK procedure(HWND h,UINT message,WPARAM w,LPARAM l) {
 }
 int WINAPI wWinMain(HINSTANCE instance,HINSTANCE previous,PWSTR arguments,int show) {
     (void)previous;(void)show;
+    visual_code=(unsigned int)((GetTickCount64() ^ GetCurrentProcessId()) % 1000000);
     if(!arguments||!arguments[0])return 2;
     wcsncpy(oracle_path,arguments,1023);
     if(oracle_path[0]=='"'){memmove(oracle_path,oracle_path+1,wcslen(oracle_path)*sizeof(wchar_t));wchar_t *last=wcsrchr(oracle_path,'"');if(last)*last=0;}

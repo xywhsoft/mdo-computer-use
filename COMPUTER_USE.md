@@ -155,6 +155,22 @@ checks pass after rebuilding mdo 0.7.0. Catalog lifetime, readiness and the four
 package checks also pass. The overlay applies cleanly to its locked SDK base,
 and dependency hashes are updated. Real desktop/model acceptance follows next.
 
+### Stage 9 — real model observation, with an independent visual challenge
+
+The Windows fixture now draws a fresh six-digit code only in its canvas; the
+accessible tree does not contain it. On 2026-10-26 the existing account model
+`ornith-1.5-35b` correctly read that code from the Cua screenshot in its ordinary
+assistant response. This verifies the image reached the real model through
+mdo's default Responses route after the serialization fix.
+
+The complete action task **failed** after 184.11 seconds: the model repeatedly
+generated an invalid `run_steps` field (`args>`), and mdo stopped it with
+`loop_guard` after 22 model calls / 31 tool calls. No fixture controls changed;
+the app did not crash. This is not a completed autonomous desktop acceptance.
+No model retries, corrective prompts or Cua changes were added. The harness
+now recognizes every terminal state, uses the native DELETE cancellation route,
+records bounded evidence and always disconnects its transport.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo
