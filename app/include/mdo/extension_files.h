@@ -7,6 +7,15 @@
 
 #include "extension_identity.h"
 
+/* Keep legacy files readable; a directory MCP owns exactly mcp.json. */
+static inline void MdoMcpConfigPath(cstr Id,char* Path,size_t Capacity)
+{
+    char Directory[160];bool Exists=false;xfileinfo Info;
+    snprintf(Directory,sizeof(Directory),"mcp/%s/mcp.json",Id);
+    if(MdoHomeExternalStat(Directory,&Exists,&Info)&&Exists)snprintf(Path,Capacity,"%s",Directory);
+    else snprintf(Path,Capacity,"mcp/%s.json",Id);
+}
+
 static inline char* MdoExtensionRead(cstr Path, bool External, size_t Limit,
     bool* Missing)
 {

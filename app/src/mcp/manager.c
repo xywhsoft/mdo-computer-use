@@ -486,10 +486,17 @@ static bool MdoMcpDiscover(MdoMcpSource** ppSources, size_t* pCount,
         size_t IdSize;
         char* Id = NULL;
 
-        if ( (Entry.Flags & XDIR_ENTRY_UTF8) == 0u || NameSize <= 5u ||
-             memcmp(Entry.Name.Data + NameSize - 5u, ".json", 5u) != 0 )
-            continue;
-        IdSize = NameSize - 5u;
+        bool Folder = Entry.Info.Type == XFILE_TYPE_DIRECTORY;
+        if ( (Entry.Flags & XDIR_ENTRY_UTF8) == 0u ||
+             (!Folder && (NameSize <= 5u ||
+              memcmp(Entry.Name.Data + NameSize - 5u, ".json", 5u) != 0)) ) continue;
+        IdSize = Folder ? NameSize : NameSize - 5u;
+        if ( Folder ) {
+            char Candidate[256];xfileinfo Info;
+            snprintf(Candidate,sizeof(Candidate),"%s/%.*s/mcp.json",MDO_MCP_RELATIVE_DIRECTORY,(int)NameSize,Entry.Name.Data);
+            if(!MdoHomeExternalStat(Candidate,&Exists,&Info))goto fail;
+            if(!Exists)continue;
+        }
         Id = xrtStrDupN(Entry.Name.Data, IdSize);
         if ( Id == NULL ) goto fail;
         if ( !MdoMcpIdValid(Id) ) {
@@ -516,21 +523,20 @@ static bool MdoMcpDiscover(MdoMcpSource** ppSources, size_t* pCount,
         pSource = &(*ppSources)[*pCount];
         memset(pSource, 0, sizeof(*pSource));
         pSource->Id = Id;
-        pSource->VirtualPath = (char*)xrtMalloc(
-            VirtualSize + NameSize + 2u);
-        pSource->RelativePath = (char*)xrtMalloc(
-            RelativeSize + NameSize + 2u);
+        size_t Tail = Folder ? 9u : 0u;
+        pSource->VirtualPath = (char*)xrtMalloc(VirtualSize + NameSize + Tail + 2u);
+        pSource->RelativePath = (char*)xrtMalloc(RelativeSize + NameSize + Tail + 2u);
         if ( pSource->VirtualPath == NULL || pSource->RelativePath == NULL )
             goto fail;
-        (void)snprintf(pSource->VirtualPath, VirtualSize + NameSize + 2u,
-            "%s/%s", MDO_MCP_DIRECTORY, Entry.Name.Data);
-        (void)snprintf(pSource->RelativePath, RelativeSize + NameSize + 2u,
-            "%s/%s", MDO_MCP_RELATIVE_DIRECTORY, Entry.Name.Data);
+        (void)snprintf(pSource->VirtualPath, VirtualSize + NameSize + Tail + 2u,
+            "%s/%.*s%s", MDO_MCP_DIRECTORY, (int)NameSize, Entry.Name.Data, Folder?"/mcp.json":"");
+        (void)snprintf(pSource->RelativePath, RelativeSize + NameSize + Tail + 2u,
+            "%s/%.*s%s", MDO_MCP_RELATIVE_DIRECTORY, (int)NameSize, Entry.Name.Data, Folder?"/mcp.json":"");
         memset(&ExternalInfo, 0, sizeof(ExternalInfo));
         if ( !MdoHomeExternalStat(pSource->RelativePath, &Exists,
                 &ExternalInfo) ) goto fail;
         pSource->External = Exists;
-        if ( Entry.Info.Type != XFILE_TYPE_FILE ||
+        if ( (!Folder && Entry.Info.Type != XFILE_TYPE_FILE) ||
              (Exists && ExternalInfo.Type != XFILE_TYPE_FILE) ) {
             if ( !MdoMcpDiagnosticAdd(pDiagnostics,
                     MDO_MCP_DIAGNOSTIC_READ, pSource->Id,
@@ -554,6 +560,11 @@ static bool MdoMcpDiscover(MdoMcpSource** ppSources, size_t* pCount,
     }
     if ( *pCount > 1u ) qsort(*ppSources, *pCount, sizeof(**ppSources),
         MdoMcpSourceCompare);
+    for(size_t i=1;i<*pCount;i++)if(!strcmp((*ppSources)[i-1].Id,(*ppSources)[i].Id)) {
+        (void)MdoMcpDiagnosticAdd(pDiagnostics,MDO_MCP_DIAGNOSTIC_DISCOVERY,(*ppSources)[i].Id,
+            (*ppSources)[i].VirtualPath,NULL,"Both a legacy MCP file and directory use this ID");
+        MdoMcpSourcesUnit(*ppSources,*pCount);*ppSources=NULL;*pCount=0;return false;
+    }
     return true;
 
 fail:
@@ -1078,7 +1089,8 @@ static bool MdoMcpParseWorkingDirectory(const xvalue* pValue,
         *pDirectory = Joined;
         return true;
     }
-    if ( !xrtPathIsAbs(Text) ) {
+    if ( !xrtPathIsAbs(Text) && strcmp(Text,".") && strcmp(Text,"./") &&
+         !(strncmp(Text,"./",2)==0 && MdoPackagePath(Text+2)) ) {
         xrtFree(Text);
         MdoMcpFormatError(Error, MDO_MCP_ERROR_LIMIT,
             "working_directory must be absolute or use mdo-home:");
@@ -1086,6 +1098,36 @@ static bool MdoMcpParseWorkingDirectory(const xvalue* pValue,
     }
     *pDirectory = Text;
     return true;
+}
+
+/* Explicit relative entries are anchored to the configuration, never the
+ * application's cwd or the shell. Validation alone does not access files. */
+static bool MdoMcpResolveDirectory(const MdoMcpSource* Source,MdoMcpServerEntry* Entry,char* Error)
+{
+    if(Entry->Transport!=MDO_MCP_TRANSPORT_STDIO)return true;
+    bool Relative=Entry->Program&&!xrtPathIsAbs(Entry->Program)&&
+        (strchr(Entry->Program,'/')||strchr(Entry->Program,'\\'));
+    bool RelativeCwd=Entry->WorkingDirectory&&!xrtPathIsAbs(Entry->WorkingDirectory);
+    if(!Relative&&!RelativeCwd)return true;
+    cstr ProgramTail=Entry->Program;if(Relative&&!strncmp(ProgramTail,"./",2))ProgramTail+=2;
+    if(Relative&&!MdoPackagePath(ProgramTail)){snprintf(Error,MDO_MCP_ERROR_LIMIT,"MCP program must stay inside its directory");return false;}
+    if(!Source->RelativePath)return true;
+    size_t N=strlen(Source->RelativePath);
+    if(N<9||strcmp(Source->RelativePath+N-9,"/mcp.json")||!Source->External){snprintf(Error,MDO_MCP_ERROR_LIMIT,"Relative MCP entries require a local <id>/mcp.json directory");return false;}
+    char* Directory=xrtStrDupN(Source->RelativePath,N-9);
+    char* Native=Directory?MdoHomeExternalPath(Directory):NULL;
+    xroot Root=Native?xrtRootOpen(Native):NULL;bool Ok=Root!=NULL;
+    if(Ok&&Relative){xfileoptions Options;xrtFileOptionsInit(&Options);Options.Flags=XFILE_READ|XFILE_NOFOLLOW;
+        xfile File=xrtRootFileOpen(Root,ProgramTail,&Options);xfileinfo Info;
+        Ok=File&&xrtFileStat(File,&Info)&&Info.Type==XFILE_TYPE_FILE;xrtClose(File);
+        if(Ok){char* Program=xrtPathJoin(Native,ProgramTail);Ok=Program!=NULL;if(Ok){xrtFree(Entry->Program);Entry->Program=Program;}}}
+    if(Ok&&RelativeCwd){cstr Tail=Entry->WorkingDirectory;
+        if(!strcmp(Tail,".")||!strcmp(Tail,"./"))Tail="";else if(!strncmp(Tail,"./",2))Tail+=2;
+        if(Tail[0]){xdir Dir=xrtRootDirOpen(Root,Tail,0);Ok=Dir!=NULL;xrtDirClose(Dir);}
+        if(Ok){char* Cwd=Tail[0]?xrtPathJoin(Native,Tail):xrtStrDup(Native);Ok=Cwd!=NULL;if(Ok){xrtFree(Entry->WorkingDirectory);Entry->WorkingDirectory=Cwd;}}}
+    if(Ok&&!Entry->WorkingDirectory)Entry->WorkingDirectory=xrtStrDup(Native);
+    if(!Ok)snprintf(Error,MDO_MCP_ERROR_LIMIT,"MCP relative entry or working directory is missing or outside its directory");
+    xrtRootClose(Root);xrtFree(Native);xrtFree(Directory);return Ok;
 }
 
 static bool MdoMcpParseEffects(const xvalue* pValue,
@@ -1426,7 +1468,7 @@ static bool MdoMcpParseServer(const MdoMcpSource* pSource,
             }
         }
     }
-    Ok = true;
+    Ok = MdoMcpResolveDirectory(pSource,pEntry,Error);
 
 done:
     xrtValueRelease(pRoot);

@@ -14,7 +14,7 @@
 | SubAgent | `subagents/<id>.md` | 相同的配置/C 接口，使用隔离账本及托管委派运行器 |
 | 自定义工具 | `tools/<id>.c` | TCC 注册，按回调执行和收集结果 |
 | Skill | `skills/<id>/SKILL.md` | 元数据发现；指令和附属文件按需读取 |
-| MCP | `mcp/<id>.json` | 现有 stdio / Streamable HTTP 连接管理 |
+| MCP | `mcp/<id>.json` 或 `mcp/<id>/mcp.json` | 现有 stdio / Streamable HTTP 连接管理；目录内程序使用配置相对路径 |
 | 命令 | `commands/<id>.c` | TCC 执行编辑器命令，参数使用 xvalue array |
 
 ID 使用 1–64 个小写字母、数字、点、短横线或下划线，不允许 Windows 保留文件名、连续点或路径分隔符。已有 C Agent、SubAgent 继续使用 `modules/agents`、`modules/subagents`。

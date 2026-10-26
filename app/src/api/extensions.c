@@ -43,6 +43,7 @@ static bool ExtensionParams(MdoApiContext* C, char Kind[16], char Id[65])
 }
 static void ExtensionPath(cstr Kind, cstr Id, char Path[160])
 {
+    if(!strcmp(Kind,"mcp")){MdoMcpConfigPath(Id,Path,160);return;}
     snprintf(Path,160u,"%s/%s%s",Kind,Id,strcmp(Kind,"knowledge")==0?"/knowledge.json":strcmp(Kind,"skills")==0?"/SKILL.md":strcmp(Kind,"mcp")==0?".json":(!strcmp(Kind,"tools")||!strcmp(Kind,"commands"))?".c":".md");
 }
 static bool ExtensionString(const xvalue* Object,cstr Key,xstrview* Text)
@@ -215,7 +216,13 @@ static bool ExtensionList(MdoApiContext* C,cstr Kind)
         char Id[65]; size_t Length=Entry.Name.Size; bool Skill=!strcmp(Kind,"skills")||!strcmp(Kind,"knowledge"); xvalue* Item;
         cstr Suffix=!strcmp(Kind,"mcp")?".json":(!strcmp(Kind,"tools")||!strcmp(Kind,"commands"))?".c":".md"; size_t SuffixSize=strlen(Suffix);
         if (!(Entry.Flags&XDIR_ENTRY_UTF8)) continue;
-        if (Skill) { if (Entry.Info.Type!=XFILE_TYPE_DIRECTORY) continue; }
+        if (!strcmp(Kind,"mcp")&&Entry.Info.Type==XFILE_TYPE_DIRECTORY) {
+            char Config[180];bool Exists=false;xfileinfo Info;
+            snprintf(Config,sizeof(Config),"mcp/%.*s/mcp.json",(int)Length,Entry.Name.Data);
+            if(!MdoHomeExternalStat(Config,&Exists,&Info)){Ok=false;break;}
+            if(!Exists||Info.Type!=XFILE_TYPE_FILE)continue;
+        }
+        else if (Skill) { if (Entry.Info.Type!=XFILE_TYPE_DIRECTORY) continue; }
         else { if (Entry.Info.Type!=XFILE_TYPE_FILE || Length<=SuffixSize ||
             memcmp(Entry.Name.Data+Length-SuffixSize,Suffix,SuffixSize)) continue;
             Length-=SuffixSize; }
@@ -526,7 +533,7 @@ static bool ExtensionDelete(MdoApiContext* C,cstr Kind,cstr Id,cstr Path,cstr Ol
 {
     bool External; xfileinfo Info; char Directory[160],Trash[190],Hash[65]; bool Moved=false,Ok;
     if (!MdoHomeExternalStat(Path,&External,&Info) || !External) return MdoApiReplyError(C,409,"builtin_resource","Built-in files cannot be deleted; disable or customize them instead",NULL);
-    if (!strcmp(Kind,"skills")||!strcmp(Kind,"knowledge")) {
+    if (!strcmp(Kind,"skills")||!strcmp(Kind,"knowledge")||(!strcmp(Kind,"mcp")&&strstr(Path,"/mcp.json"))) {
         snprintf(Directory,sizeof(Directory),"%s/%s",Kind,Id); MdoExtensionHash(Old,Hash);
         snprintf(Trash,sizeof(Trash),"%s/.deleted-%s-%.12s",Kind,Id,Hash);
         if (!MdoHomeRenameNoReplace(Directory,Trash)) goto failed;
