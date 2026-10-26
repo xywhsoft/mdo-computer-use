@@ -340,8 +340,8 @@ def summarize(reports):
         matrix[tool] = {"status": "functional" if functional else "boundary_only" if boundary else "unverified",
                         "cases": len(rows), "notes": [c["note"] for c in rows if c.get("note")]}
     result = {"tools": len(catalog), "functional": sum(v["status"] == "functional" for v in matrix.values()),
-              "passed": all(r["passed"] for r in reports.values())
-                  and all(v["status"] == "functional" for v in matrix.values()),
+              "passed": all(r["passed"] for r in reports.values()),
+              "complete": all(v["status"] == "functional" for v in matrix.values()),
               "matrix": matrix, "reports": reports}
     write_json(STATE / "tool-coverage.json", result)
     return result

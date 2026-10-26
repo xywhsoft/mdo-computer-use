@@ -9,22 +9,28 @@ transport with protocol `2026-07-28`. Windows is the first validated platform;
 Linux and macOS will use platform-specific launch profiles. No additional Agent
 prompt, Skill, recovery policy, or Cua compatibility patch is installed.
 
-## Delivery status — 2026-10-26
+## Delivery status — 2026-10-27
 
-The Windows integration is implemented and source-built. The official 63-tool
-catalog is available, both template variants pass native connection lifecycle
-validation, and 25 deterministic desktop/browser/authorization checks pass.
-The existing account model completes a real single-click and post-action visual
-feedback task on the default Responses route. Complex form/browser tasks still
-have the separately recorded failures below. Linux/macOS are extension points,
-not device-validated targets. Recording/perception and every individual tool
-have not all been exercised; 63 is the discovered schema count.
+The Windows integration and remaining acceptance are complete. The existing
+account model completed both full desktop and browser tasks on the default
+Responses route, checked against independent oracles and retained tool images.
+All 63 official tools have functional acceptance, with 75 explicit cases,
+including real H.264 recording, trajectory replay, signed perception/OCR,
+clipboard restoration, browser file upload/download and page dialogs. Both
+template variants pass native lifecycle checks. Runtime data including the one
+SDK export, optional dependencies, caches and Home is about 1.73 GiB.
+
+Cua remains byte-identical to 0.38.0; no extra Agent prompt, Skill or retry
+policy was added. Known Cua and model limitations remain documented. Linux and
+macOS retain platform extension points and are not device-validated targets.
+Single successful model trials do not establish reliability or performance.
 
 Start with the [Chinese operating guide](docs/computer-use.md). The sanitized
-[machine-readable acceptance record](tests/acceptance/computer-use/windows-2026-10-26.json)
-contains both successes and failures without account credentials or runtime IDs.
+[current acceptance record](tests/acceptance/computer-use/windows-2026-10-27.json)
+and [earlier observations](tests/acceptance/computer-use/windows-2026-10-26.json)
+retain successes, failures and tested limits without account credentials.
 
-## Milestones
+## Milestones and historical observations
 
 1. Deploy and smoke-test mdo directly in this checkout, reusing a local executable.
 2. Pin the official Cua artifact; supply an installable MCP service template and
@@ -326,3 +332,13 @@ Responses 工具 strict 值按定义显式传递后，使用同一完整任务�
 ### 2026-10-27 大图保留
 
 原 MCP 解码层存在独立于连接上限的 1 MiB 图片限制，超过时工具仍返回成功而不给模型图片。已按已有传输消息预算接收图片，由下游 result writer 继续执行结果预算；不调整 Cua 图片大小或内容。原生回归在修复前返回 image_bytes=0，修复后保留 1921165 字节有效 PNG，逐字节比对通过。大型 typed 结果分页及图片回归继续通过。
+
+### 2026-10-27 剩余任务完成
+
+63/63 项工具均取得功能验收，桌面 59 个与浏览器 16 个明确用例通过；边界用例单独标识，不以拒绝代替功能通过。已验证 H.264 视频的时长与帧数、轨迹回放的独立拖动计数、签名扩展安装与 OCR、上传 SHA-256、下载字节、网页弹窗，以及剪贴板中文往返和原有所有受支持格式逐字节恢复。
+
+原生回归、5 项包检查、4 项 MCP 合约检查、0.1.2 两方案模板生命周期、63 工具发现和可选依赖启动检查通过。官方 Cua 六文件再次校验一致，测试进程清理完成；普通 Agent 配置和 Cua 无补丁。验收命令默认时间预算改为 900 秒，以覆盖已测完整任务；分项工具检查分别报告用例通过 passed 与完整覆盖 complete。
+
+保留的限制：后台组合键在特定 Win32 Edit 上未形成选区，前台通过；展开菜单后的完整路径曾被拒绝，从实际菜单项路径调用通过；同步网页 prompt 的点击曾超时，预先注册观察并处理延迟 prompt 通过；原有 UWP/取消问题不变。光标只核对状态和位置；FFmpeg 工具检查已有便携依赖，不执行全局包管理器。模型完整任务单次通过约 10–12 分钟，不代表稳定性或效率保证。Linux/macOS 继续预留平台模板接口。
+
+项目运行数据（含一份 SDK、全部缓存、扩展、Home）约 1.73 GiB，无额外工作树、验证副本或并行开发。使用方式与依赖许可见 docs/computer-use.md；逐工具矩阵和失败历史见 tests/acceptance/computer-use/windows-2026-10-27.json。未向远端推送。

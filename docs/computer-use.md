@@ -39,7 +39,7 @@ python -m computer_use install-template
 `driver` 下载并校验固定的官方 ZIP 和其中全部六个文件；已有正确安装会直接复用。
 可用 `--archive PATH` 复用已下载的官方 ZIP。安装路径为
 `.build/computer-use/cua/0.38.0/`，须保留完整目录。
-ZIP 约 34.23 MiB，解压后约 93.76 MiB；未安装可选模型或 perception 扩展。
+ZIP 约 34.23 MiB，解压后约 93.76 MiB。基础驱动不附带可选模型或 perception 扩展。
 
 `configure` 创建停用的设备连接。在 mdo「设置 → MCP」中启用并测试连接。
 也可在 mdo 停止时明确执行：
@@ -88,13 +88,37 @@ flowchart LR
 ```
 
 没有另建 Agent 框架、代理服务器或桌面 API。MCP 原始工具、说明和结构化结果
-均由现有链路传递。宿主默认支持把一个不超过 1 MiB 的 MCP 图片结果交给模型；
-超出或多图片场景需要单独验证，不能据此宣称全部媒体组合已支持。
+均由现有链路传递。图片遵循连接的传输预算（本模板 16 MiB）和宿主结果预算，
+已验证超过 1 MiB 的有效 PNG 与本机 4K 桌面截图。当前每次工具调用向模型传递
+第一张受支持的图片；多图片或音频组合不在本期验收范围。
 
-接入时修复了 mdo 宿主的两个通用问题：动态工具目录引用提前释放，以及
-Responses 多段工具结果丢失文本/图片。这些变更保存在现有 SDK overlay 和
+接入时修复了 mdo 宿主的动态工具目录引用生命周期、Responses 多段工具结果、
+显式 strict 值、大型已持久化结果的 inline 预算，以及大型 MCP 图片保留。
+这些通用变更保存在现有 SDK overlay 和
 `deps.lock`；Cua 的六个文件始终与官方哈希一致。没有改变 Cua 的窗口映射、
 取消机制或 Agent 行为。
+
+## 可选录屏与视觉依赖
+
+本目录已验证 FFmpeg 9.0.2 和官方签名 Cua Perception 0.2.1。查看固定来源、
+大小和许可证，再按需安装并启动：
+
+```powershell
+python -m computer_use addons
+python -m computer_use addons --install
+python -m computer_use run --addons
+```
+
+FFmpeg 使用 Gyan essentials GPL 构建，只提取 ffmpeg、ffprobe 和许可文件，
+不安装全局包、不修改系统 PATH。Perception 由原版 Cua 的签名验证与安装机制管理，
+下载 421,313,686 字节，安装 449,715,762 字节，CPU 推理；包含 MIT、Apache-2.0、
+BSD 及 **AGPL-3.0-only 图标模型**，不作为纯 MIT 资源分发。
+
+依赖、模型和缓存保留在 `.build/computer-use/`，启动参数仅作用于该次 mdo 子进程。
+首次准备会给予当前 Windows 用户对项目 `cua-home` 数据目录的完全控制，
+供官方安装器设置并验证扩展 ACL；不改其他目录的权限。重复安装校验并复用固定版本。
+`run` 不带 `--addons` 时仍可使用普通截图、桌面及浏览器工具。
+本次包含 SDK、下载缓存、扩展和 Home 的运行数据约 1.73 GiB，没有额外应用副本。
 
 ## 验证命令
 
@@ -109,7 +133,10 @@ python -m computer_use transport-check
 python -m computer_use transport-check --scope browser-grant
 python tests/test_computer_use_catalog.py
 python tests/test_computer_use_responses.py
+python tests/test_computer_use_result_cap.py
+python tests/test_computer_use_image_cap.py
 python -m unittest discover -s tests -p test_computer_use.py
+python -m computer_use tool-check --addons
 python -m computer_use acceptance --scope desktop
 python -m computer_use acceptance --scenario click
 python -m computer_use acceptance --scope browser
@@ -119,6 +146,10 @@ python -m computer_use acceptance --scope browser
 会话协议参数。它只作用于新建的验收会话，不改变默认模型协议。
 
 `transport-check` 是确定性原生传输测试；`acceptance` 才是实际账号模型自主操作。
+`tool-check --addons` 为全部 63 项官方工具生成逐项功能与边界记录，使用独立控件、
+页面和视频 oracle；`--scope desktop|browser` 可只检查一类。输出的 `passed` 表示
+本轮用例通过，`complete` 表示所有 63 项均有功能验证，不能相互替代。
+完整模型验收默认预算为 900 秒，仅影响验收命令，不修改普通 Agent 策略。
 后者消耗现有账号额度，不会把账号凭据写入代码或报告。
 桌面测试仅操作专用 Win32 验收窗口。浏览器测试使用本机回环页面和临时测试浏览器，
 不复制用户浏览器配置。测试结束清理自己启动的进程。
@@ -129,22 +160,33 @@ python -m computer_use acceptance --scope browser
 
 当前实际结果、提交阶段和未通过项见 [验收记录](../COMPUTER_USE.md)。
 普通工具调用成功、截图进入会话和模型完成任务是不同的验收条件。
-当前默认 Responses 路径已通过独立的单击及读图真实闭环，耗时 172.62 秒。
-完整表单和浏览器自主任务仍未通过，详见记录；确定性桌面/浏览器测试均通过。
+截至 2026-10-27，默认 Responses 路径已通过独立单击、完整桌面表单和浏览器表单。
+确定性工具测试全部通过，63/63 项取得功能验证；完整记录保留早期失败。
 现有浏览器授权检查仅操作本目录创建的空测试配置，验证未授权拒绝、明确授权后
 输入与截图成功、断开不终止外部浏览器，最后清理此测试配置。
 
 | 真实模型任务 | 协议 | 结果 | 耗时 |
 | --- | --- | --- | --- |
 | 单击及读取截图验证码 | Responses | 通过，点击一次且反馈图像正确 | 172.62 秒 |
-| 完整表单 | Responses | `loop_guard`，未修改控件 | 184.11 秒 |
-| 完整表单 | Chat Completions | 输入、按钮、复选框通过；整体超时 | 300.89 秒 |
-| 完整表单 | Anthropic Messages | 首个模型请求超时，无工具调用 | 300.19 秒 |
-| 浏览器完整表单 | Responses | 未完成，超时 | 301.16 秒 |
+| 完整桌面表单及截图验证码 | Responses | 通过，独立窗口 oracle 核验 | 694.48 秒 |
+| 浏览器完整表单及滚动、截图 | Responses | 通过，独立页面 oracle 核验 | 607.81 秒 |
 
 上述均使用现有账号的 `ornith-1.5-35b`，不包含补充指令或自动重试策略。
-63 项表示官方工具 schema 均可加载，本轮未逐一执行录屏、可选 perception 等
-全部工具；其依赖、许可及设备能力继续遵循 Cua 本身的约定。
+工具验收还包括文件选择与下载校验、网页弹窗、菜单、组合键、剪贴板中文往返及
+原有格式逐字节恢复、批处理、脚本、配置恢复、OCR、有效 H.264 视频及轨迹回放。
+安装 FFmpeg 工具验证了已有便携依赖检测，未执行全局包管理器安装。
+
+这些是已执行用例的通过记录，单次模型成功不代表稳定性或效率达标。当前已观察到：
+
+- 模型有时选择无效参数或绕路；完整任务仍耗时约十分钟，最终文字还可能生成无效图片。
+  验收使用真实工具图片和独立状态，不依赖模型自述。
+- Cua 0.38.0 的后台组合键在测试 Edit 控件上未形成选区；显式前台投递通过。
+  原生菜单展开后完整路径被拒绝，从实际暴露的菜单项路径调用通过。
+- 同步触发网页 prompt 的点击曾超时；先注册弹窗观察、再处理延迟出现的网页 prompt 通过。
+- 原有 UWP 窗口映射和取消延迟问题仍保留。光标状态和位置已验证，动画外观未作视觉评分。
+
+未为这些现象加入 Cua 补丁、Agent 提示或自动恢复策略。早期协议失败及本次边界记录见
+[验收记录](../COMPUTER_USE.md) 和 [2026-10-27 结果](../tests/acceptance/computer-use/windows-2026-10-27.json)。
 
 ## 升级与跨平台
 

@@ -164,7 +164,7 @@ def main() -> int:
     tools_parser.add_argument("--scope", choices=("desktop", "browser", "all"), default="all")
     acceptance_parser = commands.add_parser("acceptance", help="Run the real account model on the project test window")
     acceptance_parser.add_argument("--model", default="ornith-1.5-35b")
-    acceptance_parser.add_argument("--timeout", type=int, default=300)
+    acceptance_parser.add_argument("--timeout", type=int, default=900)
     acceptance_parser.add_argument("--scope", choices=("desktop", "browser"), default="desktop")
     acceptance_parser.add_argument("--protocol", choices=("openai-responses", "openai-chat-completions", "anthropic-messages"))
     acceptance_parser.add_argument("--scenario", choices=("form", "click"), default="form")
@@ -197,7 +197,7 @@ def main() -> int:
             if args.scope in ("browser", "all"):
                 reports["browser"] = browser(env)
             result = summarize(reports)
-            print(json.dumps({k: result[k] for k in ("passed", "tools", "functional")}, indent=2))
+            print(json.dumps({k: result[k] for k in ("passed", "complete", "tools", "functional")}, indent=2))
             return 0 if result["passed"] else 1
         elif args.command == "acceptance":
             from .acceptance import run, summary

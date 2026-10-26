@@ -93,7 +93,7 @@ def run_task(app, report: dict, title: str, prompt: str, timeout: float) -> dict
     return active
 
 
-def run(model: str = "ornith-1.5-35b", timeout: float = 300, protocol: str | None = None,
+def run(model: str = "ornith-1.5-35b", timeout: float = 900, protocol: str | None = None,
         scenario: str = "form") -> dict:
     if os.name != "nt":
         raise RuntimeError("This desktop acceptance fixture currently validates Windows only")

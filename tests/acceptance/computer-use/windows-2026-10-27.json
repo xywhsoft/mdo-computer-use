@@ -102,5 +102,467 @@
       }
     ],
     "known_final_response_issue": "Model included an invented base64 image in final prose; validation uses retained native tool image parts and independent page oracle, not that data URI."
+  },
+  "per_tool_acceptance": {
+    "passed": true,
+    "complete": true,
+    "tools": 63,
+    "functional": 63,
+    "matrix": {
+      "bring_to_front": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "browser_click": {
+        "status": "functional",
+        "cases": 2,
+        "notes": []
+      },
+      "browser_dialog": {
+        "status": "functional",
+        "cases": 3,
+        "notes": [
+          "register dialog observation before the fixture's delayed prompt opens"
+        ]
+      },
+      "browser_download": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "browser_navigate": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "browser_pointer": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "browser_prepare": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "browser_select": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "browser_set_input_files": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "browser_type": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "check_for_update": {
+        "status": "functional",
+        "cases": 1,
+        "notes": [
+          "read-only; no update installed"
+        ]
+      },
+      "check_permissions": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "click": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "clipboard_read": {
+        "status": "functional",
+        "cases": 1,
+        "notes": [
+          "formats only; user clipboard text is not logged or changed"
+        ]
+      },
+      "clipboard_write": {
+        "status": "functional",
+        "cases": 1,
+        "notes": [
+          "Cua text round-trip; fixture retains and restores all original supported formats in memory"
+        ]
+      },
+      "debug_window_info": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "double_click": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "drag": {
+        "status": "functional",
+        "cases": 2,
+        "notes": [
+          "record an exact owned-window action without an ephemeral element token"
+        ]
+      },
+      "end_session": {
+        "status": "functional",
+        "cases": 3,
+        "notes": [
+          "owned browser windows must close"
+        ]
+      },
+      "escalate_session": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "get_accessibility_tree": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "get_agent_cursor_state": {
+        "status": "functional",
+        "cases": 1,
+        "notes": [
+          "cursor state and target position readback; visible overlay rendering is not asserted"
+        ]
+      },
+      "get_browser_state": {
+        "status": "functional",
+        "cases": 2,
+        "notes": []
+      },
+      "get_config": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "get_cursor_position": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "get_desktop_state": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "get_guide": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "get_recording_state": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "get_screen_size": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "get_session": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "get_session_state": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "get_window_state": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "health_report": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "hotkey": {
+        "status": "functional",
+        "cases": 2,
+        "notes": [
+          "0.38.0 background modifiers: verified no selection on this Win32 Edit"
+        ]
+      },
+      "install_extension": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "install_ffmpeg": {
+        "status": "functional",
+        "cases": 1,
+        "notes": [
+          "portable pinned FFmpeg supplied on this process PATH; no global package installation"
+        ]
+      },
+      "invoke_menu": {
+        "status": "functional",
+        "cases": 2,
+        "notes": [
+          "0.38.0 loses the non-actionable Menu ancestor after expansion in this native fixture"
+        ]
+      },
+      "kill_app": {
+        "status": "functional",
+        "cases": 1,
+        "notes": [
+          "only the process launched by this test"
+        ]
+      },
+      "launch_app": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "list_apps": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "list_sessions": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "list_windows": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "move_cursor": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "page": {
+        "status": "functional",
+        "cases": 1,
+        "notes": [
+          "legacy read-only browser API against the owned local page"
+        ]
+      },
+      "parse_visual_regions": {
+        "status": "functional",
+        "cases": 1,
+        "notes": [
+          "OCR text must identify independently known fixture content"
+        ]
+      },
+      "press_key": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "replay_trajectory": {
+        "status": "functional",
+        "cases": 1,
+        "notes": [
+          "independent drag counter must increase on replay"
+        ]
+      },
+      "right_click": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "run_script": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "run_steps": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "scroll": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "set_agent_cursor_enabled": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "set_agent_cursor_motion": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "set_agent_cursor_theme": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "set_config": {
+        "status": "functional",
+        "cases": 1,
+        "notes": [
+          "real setting mutation/readback; exact original config restored immediately"
+        ]
+      },
+      "set_value": {
+        "status": "functional",
+        "cases": 2,
+        "notes": []
+      },
+      "set_window_frame": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "start_recording": {
+        "status": "functional",
+        "cases": 2,
+        "notes": [
+          "independent ffprobe validates finalized video duration and decoded frame count"
+        ]
+      },
+      "start_session": {
+        "status": "functional",
+        "cases": 2,
+        "notes": [
+          "explicit legacy capture policy is required to exercise deprecated escalation",
+          "current per-call targeting; no deprecated capture policy"
+        ]
+      },
+      "stop_recording": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "type_text": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "verify_state": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      },
+      "zoom": {
+        "status": "functional",
+        "cases": 1,
+        "notes": []
+      }
+    },
+    "case_counts": {
+      "desktop": 59,
+      "browser": 16
+    },
+    "recording": {
+      "tool": "start_recording",
+      "passed": true,
+      "note": "independent ffprobe validates finalized video duration and decoded frame count",
+      "video_bytes": 1907644,
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "nb_frames": "55"
+          }
+        ],
+        "format": {
+          "duration": "4.600000"
+        }
+      }
+    },
+    "clipboard": [
+      {
+        "tool": "clipboard_write",
+        "passed": true,
+        "note": "Cua text round-trip; fixture retains and restores all original supported formats in memory",
+        "kind": "functional",
+        "mcp_success": true,
+        "refused": false
+      }
+    ],
+    "limitations": [
+      "0.38.0 background modifiers: verified no selection on this Win32 Edit",
+      "0.38.0 loses the non-actionable Menu ancestor after expansion in this native fixture",
+      "Immediate page prompt inside browser_click timed out; a delayed page-owned prompt passed inspect and accept with prior event registration. No Cua change was made.",
+      "Cursor state and target position were checked; overlay animation appearance was not visually graded.",
+      "install_ffmpeg verified existing portable binary detection; system package-manager installation was not executed."
+    ]
+  },
+  "optional_dependencies": {
+    "perception": {
+      "version": "0.2.1",
+      "target": "x86_64-pc-windows-msvc",
+      "publisher_signature_verified": true,
+      "trust": "publisher-verified",
+      "download_size": 421313686,
+      "installed_size": 449715762,
+      "archive_sha256": "6709579aa3f938e8200c0a51b1abe450d4fda51b09e97517e0cb4c272b5bff37",
+      "license": "LicenseRef-Mixed"
+    },
+    "perception_status": {
+      "id": "cua-perception",
+      "display_name": "Cua Perception",
+      "description": "Optional signed perception worker and target-specific model bundle.",
+      "protocol_version": 1,
+      "installed": true,
+      "active_version": "0.2.1",
+      "healthy": true,
+      "trust": "publisher-verified",
+      "evidence_class": "production-publisher-verified",
+      "publisher_id": "cua",
+      "publisher_key_id": "cua-extension-ed25519-2026-09",
+      "catalog_version": 2609260017,
+      "detail": "healthy; integrity and publisher verification checks passed"
+    },
+    "first_perception_install_via_native_mcp": true,
+    "ffmpeg": {
+      "version": "9.0.2",
+      "archive_sha256": "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba",
+      "license": "GPL-3.0-or-later (Gyan essentials build; separate executable)"
+    },
+    "runtime_state_bytes_at_measurement": 1791591159,
+    "home_bytes_at_measurement": 59201622
+  },
+  "native_regressions": {
+    "retained_catalog": "PASS",
+    "responses_output_forms": 5,
+    "explicit_strict_true_and_false": "PASS",
+    "persisted_tool_result_budget": "PASS (40000 bytes to 279-byte locator, text and image cases)",
+    "large_image": "PASS (1921165-byte valid PNG retained byte-for-byte)"
+  },
+  "final_delivery": {
+    "package_version": "0.1.2",
+    "official_cua_files_verified": true,
+    "template_variants": [
+      "windows",
+      "windows-existing-profile"
+    ],
+    "native_template_lifecycle": "PASS",
+    "native_mcp_probe": {
+      "tools": 63,
+      "protocol_version": "2026-07-28",
+      "disconnect_verified": true
+    },
+    "smoke_with_optional_dependencies": "PASS",
+    "package_tests": 5,
+    "mcp_contract_tests": 4,
+    "owned_runtime_processes_after_checks": 0,
+    "agent_workarounds_added": false,
+    "cua_modified": false,
+    "linux_macos": "platform extension points retained; not device-validated",
+    "pushed": false
   }
 }

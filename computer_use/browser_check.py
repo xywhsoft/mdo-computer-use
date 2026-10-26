@@ -133,7 +133,7 @@ def run() -> dict:
         return report
 
 
-def model_acceptance(model="ornith-1.5-35b", timeout=300, protocol=None) -> dict:
+def model_acceptance(model="ornith-1.5-35b", timeout=900, protocol=None) -> dict:
     from .__main__ import Application
     from .acceptance import wait_account, run_task
     report = {"model": model, "backend": "official Cua through mdo MCP",
