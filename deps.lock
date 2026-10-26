@@ -55,7 +55,7 @@
     "xwork": {
       "version": "3.11.0",
       "source_commit": "0dc70638b0faa00b89a6cdb4e73eac35ad2213e3",
-      "production_tree_sha256": "bc2b8c0832391b241f2085d16e824ec06f4d4ce4ffb3c12f587157baeb3aa1b7",
+      "production_tree_sha256": "5caeb24610f805e53322b3e48918ace1f3f634b75a106a6eb9d2e9d30d876e4d",
       "abi_version": 9,
       "event_schema_version": 3
     }
@@ -71,9 +71,9 @@
   },
   "sdk_overlay": {
     "path": "tools/dependencies/xwork-mcp.patch",
-    "sha256": "16f28b0bd9ecf791b505bbff9001a0c18bbaf398e29d906dc01df967818bcb84",
+    "sha256": "e25c4683514bf49137e1653739010ebc879b0422e294fa3eb274d1ca180e9983",
     "base_commit": "216f5445163ca30c815ad7d5d2da3b71cb2f6401",
-    "purpose": "MCP and platform compatibility, native browser panels, atomic file replacement and symmetric role runtime hooks",
+    "purpose": "MCP/platform compatibility, retained dynamic tool catalogs, native browser panels and symmetric role hooks",
     "xrt_single_header_sha256": "36d536851fa9c09d82d4d0196b75f30beff38fe8799bf9c1b86b63eecba04c6a"
   }
 }

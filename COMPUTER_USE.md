@@ -123,6 +123,20 @@ This is a generic mdo host integration defect, separate from the deferred Cua
 window/cancellation behavior. The required correction belongs to mdo's catalog
 ownership; the official Cua binaries and Agent instructions remain unchanged.
 
+### Stage 6 — retained host catalog ownership
+
+The mdo SDK overlay now retains the active tool catalog for the full execution
+callback and retains the executor's borrowed descriptor strings until its tool
+view is rebuilt or unbound. The public ABI is unchanged. Both ownership paths
+are exercised by the native regression, including release counts after unbind
+and Agent destruction. It now reports `catalog_lifetime=PASS`.
+
+The authoritative change is in the existing mdo SDK overlay and `deps.lock`,
+not just a local SDK edit. Reverse/clean application of the complete overlay
+and dependency tree verification passed. The rebuilt 0.7.0 app again passes
+readiness, Cua's 63-tool discovery, template connection lifecycle and the four
+package checks. Cua's six official files still match the pinned release.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo

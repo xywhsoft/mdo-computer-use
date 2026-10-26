@@ -30,12 +30,11 @@ static xwork_result Grow(void* Data, const xwork_tool_context* Context,
     }
     return xworkToolOutputSet(Output, true, "grown") ? XWORK_RESULT_OK : XWORK_RESULT_ERROR;
 }
-void ServiceInit(XS_HostInfo* Host) {
+static void Run(bool ListFirst) {
     xllm_session_config SessionConfig; xwork_agent_config Config; xwork_error Error;
     xwork_tool_definition Tool = {0}; xllm_executor Executor = {0};
     xllm_request Request; xllm_tool_call Call = {0};
     xllm_executor_ctx Context = {0}; xllm_executor_result Result = {0};
-    (void)Host;
     xllmSessionConfigInit(&SessionConfig);
     xllm_session* Session = xllmSessionCreate(&SessionConfig, NULL);
     xworkAgentConfigInit(&Config); Config.pSession = Session;
@@ -50,16 +49,24 @@ void ServiceInit(XS_HostInfo* Host) {
         printf("catalog_probe_init_error=%s\n", Error.sMessage); exit(2);
     }
     xllmRequestInit(&Request);
-    if (!Executor.pListTools(Executor.pUserData, &Request)) exit(3);
+    if (ListFirst && !Executor.pListTools(Executor.pUserData, &Request)) exit(3);
     Call.sId = "catalog-growth"; Call.sName = "grow"; Call.sArgumentsJson = "{}";
     Context.uRound = 1;
     if (!Executor.pExecute(Executor.pUserData, &Call, &Context, &Result) || !Result.bSuccess) exit(4);
-    if (Request.iToolCount != 1 || strcmp(Request.pTools[0].sName, "grow")) exit(5);
+    if (ListFirst && Owners != 2) {
+        puts("catalog_view_retired_after_callback"); fflush(stdout); exit(18);
+    }
+    if (ListFirst && (Request.iToolCount != 1 || strcmp(Request.pTools[0].sName, "grow"))) exit(5);
     xllmRequestUnit(&Request);
     xworkExecutorUnbind(&Executor);
     if (Owners != 1) exit(6);
     xworkAgentDestroy(Agent); xllmSessionDestroy(Session);
     if (Owners != 0) exit(7);
+}
+void ServiceInit(XS_HostInfo* Host) {
+    (void)Host;
+    Run(true);
+    Run(false);
     puts("catalog_lifetime=PASS"); fflush(stdout); exit(0);
 }
 void ServiceUnit(XS_HostInfo* Host) { (void)Host; }

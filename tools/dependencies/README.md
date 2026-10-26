@@ -1,5 +1,14 @@
 # Locked xs host source
 
+Computer Use integration additionally retains immutable xwork tool catalogs
+while an execution callback or executor request view borrows their descriptors.
+Dynamic MCP tool loading can replace the Agent catalog inside a callback;
+retiring it immediately previously left those pointers dangling. The regression
+`tests/test_computer_use_catalog.py` runs directly in the project checkout and
+checks both cached-view and callback-only lifetimes, including final owner
+release. The SDK overlay and xwork production hash are pinned together in
+`deps.lock`; this does not modify Cua or its cancellation/capture behavior.
+
 mdo 的 native overlay 另包含浏览器面板与窗口位置记忆。窗口状态文件由
 `window.state_file` 按与 `profile_dir` 相同的 Home 选择规则解析，保存在 Home 的
 `data/ui`，与浏览器缓存分开。原生头文件在 `tools/native/`；更新后执行

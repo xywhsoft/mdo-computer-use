@@ -73,7 +73,50 @@
      if ( pAgent->OnApproval && pAgent->pCallbackLock &&
           xrtMutexLock(pAgent->pCallbackLock) ) {
          bool bAllowed = pAgent->OnApproval(
-@@ -532,7 +535,7 @@
+@@ -458,6 +461,7 @@
+ )
+ {
+     const xwork_tool_entry* pTool;
++    xwork_tool_catalog* pCatalog;
+     xwork_tool_context tContext;
+     xwork_tool_output tOutput;
+     xwork_tool_result_writer tResultWriter;
+@@ -481,7 +485,17 @@
+         xwork__set_error(pError, XWORK_ERROR_INVALID_ARGUMENT, "invalid tool execution arguments");
+         return XWORK_RESULT_ERROR;
+     }
++    if ( !xrtMutexLock(pAgent->pStateLock) ) {
++        xwork__set_error(pError, XWORK_ERROR_CONTEXT, "failed to retain active tool catalog");
++        return XWORK_RESULT_ERROR;
++    }
++    pCatalog = xworkToolCatalogRef(pAgent->pToolCatalog);
+     pTool = xwork__find_tool(pAgent, pCall->sName ? pCall->sName : "");
++    (void)xrtMutexUnlock(pAgent->pStateLock);
++    if ( !pCatalog ) {
++        xwork__set_error(pError, XWORK_ERROR_CONTEXT, "active tool catalog is unavailable");
++        return XWORK_RESULT_ERROR;
++    }
+     xworkToolOutputInit(&tOutput);
+     xworkErrorInit(&tPermissionError);
+     memset(&tResultWriter, 0, sizeof(tResultWriter));
+@@ -494,7 +508,7 @@
+     tContext.uAgentTurn = uTurn;
+     tContext.uAgentId = pAgent->uAgentId;
+     tContext.uRunId = pAgent->pActiveRun ? pAgent->pActiveRun->uRunId : 0u;
+-    tContext.uCatalogGeneration = pAgent->uToolRegistryGeneration;
++    tContext.uCatalogGeneration = pCatalog->uGeneration;
+     tContext.pCancel = pOperationCancel
+         ? pOperationCancel : xwork__active_cancel(pAgent);
+     uAgentDeadline = xwork__active_deadline(pAgent);
+@@ -516,6 +530,7 @@
+     if ( !xwork__emit(pAgent, &tEvent) ) {
+         xwork__set_error(pError, pAgent->bEventSinkFailed ? XWORK_ERROR_IO : XWORK_ERROR_CANCELLED,
+             pAgent->bEventSinkFailed ? "session event persistence failed before tool execution" : "agent was cancelled before tool execution");
++        xworkToolCatalogRelease(pCatalog);
+         return pAgent->bEventSinkFailed ? XWORK_RESULT_ERROR : XWORK_RESULT_CANCELLED;
+     }
+     if ( !pTool ) {
+@@ -532,7 +547,7 @@
              if ( !xworkToolOutputSet(&tOutput, false, sFailure) ) goto oom;
          } else if ( !xworkToolOutputSet(&tOutput, false, "tool execution denied by approval policy") ) goto oom;
      } else {
@@ -82,7 +125,7 @@
              memset(&tHook, 0, sizeof(tHook));
              tHook.ePhase = XWORK_HOOK_BEFORE_TOOL;
              tHook.uAgentTurn = uTurn;
-@@ -541,10 +544,19 @@
+@@ -541,10 +556,19 @@
              tHook.sArgumentsJson = pCall->sArgumentsJson ? pCall->sArgumentsJson : "{}";
              if ( !pAgent->pCallbackLock ||
                   !xrtMutexLock(pAgent->pCallbackLock) ) goto oom;
@@ -104,7 +147,7 @@
                  goto tool_ready;
              }
              if ( eHookAction == XWORK_HOOK_CANCEL ) {
-@@ -650,7 +662,7 @@
+@@ -650,7 +674,7 @@
              goto tool_ready;
          }
          if ( pbEffectApplied ) *pbEffectApplied = tOutput.bSuccess;
@@ -113,7 +156,7 @@
              memset(&tHook, 0, sizeof(tHook));
              tHook.ePhase = XWORK_HOOK_AFTER_TOOL;
              tHook.uAgentTurn = uTurn;
-@@ -661,11 +673,21 @@
+@@ -661,11 +685,21 @@
              tHook.bSuccess = tOutput.bSuccess;
              if ( !pAgent->pCallbackLock ||
                   !xrtMutexLock(pAgent->pCallbackLock) ) goto oom;
@@ -138,7 +181,15 @@
                       !xwork__buf_append_cstr(&tHookOutput, tOutput.sContent) ||
                       !xworkToolOutputSet(&tOutput, false, tHookOutput.pData) ) goto oom;
              } else if ( eHookAction == XWORK_HOOK_CANCEL ) {
-@@ -1026,7 +1048,7 @@
+@@ -741,6 +775,7 @@
+     free(sArtifact);
+     xwork__buf_unit(&tSession);
+     xwork__buf_unit(&tHookOutput);
++    xworkToolCatalogRelease(pCatalog);
+     return eResult;
+ }
+ 
+@@ -1026,7 +1061,7 @@
      return true;
  }
  
@@ -147,7 +198,7 @@
      xwork_agent* pAgent,
      const char* sPrompt,
      const xllm_message* pUserMessage,
-@@ -1041,6 +1063,7 @@
+@@ -1041,6 +1076,7 @@
      uint64_t uPreviousBatchHash = 0u;
      uint32_t uRepeatedBatches = 0u;
      uint32_t uConsecutiveToolFailures = 0u;
@@ -155,7 +206,7 @@
      uint32_t uVerificationPrompts = 0u;
      bool bNeedNewTurn = false;
      bool bRecoverPendingTools = false;
-@@ -1296,6 +1319,11 @@
+@@ -1296,6 +1332,11 @@
              bRecoverPendingTools = false;
              bNeedNewTurn = true;
          }
@@ -167,7 +218,7 @@
          eResult = xwork__compact_if_needed(pAgent, uTurn, &tRun, false, pError);
          if ( eResult != XWORK_RESULT_OK ) goto cleanup;
          if ( bNeedNewTurn ) {
-@@ -1336,6 +1364,25 @@
+@@ -1336,6 +1377,25 @@
          }
          tRequest.bParallelToolCalls = true;
          tRequest.eToolChoice = XLLM_TOOL_CHOICE_AUTO;
@@ -193,7 +244,7 @@
          memset(&tEvent, 0, sizeof(tEvent));
          {
              char sRequestFingerprint[17];
-@@ -1393,6 +1440,12 @@
+@@ -1393,6 +1453,12 @@
              eResult = XWORK_RESULT_ERROR;
              goto cleanup;
          }
@@ -206,7 +257,7 @@
          if ( !xwork__usable_model_response(pResponse) ) {
              xllmErrorInit(&tModelError);
              tModelError.eCode = XLLM_ERROR_PROTOCOL;
-@@ -1406,6 +1459,7 @@
+@@ -1406,6 +1472,7 @@
              eResult = XWORK_RESULT_ERROR;
              goto cleanup;
          }
@@ -214,7 +265,7 @@
          tRun.tLastUsage = pResponse->tUsage;
          if ( !xllmSessionAddAssistantResponse(pAgent->pSession, uTurn, pResponse) ) {
              xllmResponseDestroy(pResponse);
-@@ -1612,6 +1666,24 @@
+@@ -1612,6 +1679,24 @@
      return eResult;
  }
  
@@ -2725,3 +2776,65 @@
 +    }
 +    if(!SetWindowSubclass(window,xws_proc,(UINT_PTR)state,(DWORD_PTR)state)){xrtFree(state->Parent);free(state->Path);free(state);}
 +}
+--- a/lib/xwork/src/xwork_executor.c
++++ b/lib/xwork/src/xwork_executor.c
+@@ -15,6 +15,7 @@
+     /* Tool-table cache (改造 B): owned xllm_tool copies rebuilt only when
+      * the registry generation changes; requests borrow it as a view. */
+     xllm_tool* pToolCache;
++    xwork_tool_catalog* pToolCacheCatalog; /* pins strings borrowed by the view */
+     size_t iToolCacheCount;
+     uint64_t uToolCacheGeneration;
+ };
+@@ -23,22 +24,35 @@
+ {
+     size_t i;
+     xllm_tool* pNew;
+-    if ( pState->pAgent->iToolCount != pState->iToolCacheCount ) {
++    xwork_tool_catalog* pCatalog;
++    xwork_tool_catalog* pOld;
++    if ( !xrtMutexLock(pState->pAgent->pStateLock) ) return false;
++    pCatalog = xworkToolCatalogRef(pState->pAgent->pToolCatalog);
++    (void)xrtMutexUnlock(pState->pAgent->pStateLock);
++    if ( !pCatalog ) return false;
++    if ( pCatalog->iToolCount != pState->iToolCacheCount ) {
+         pNew = (xllm_tool*)realloc(pState->pToolCache,
+-            pState->pAgent->iToolCount * sizeof(*pNew));
+-        if ( !pNew && pState->pAgent->iToolCount ) { return false; }
++            pCatalog->iToolCount * sizeof(*pNew));
++        if ( !pNew && pCatalog->iToolCount ) {
++            xworkToolCatalogRelease(pCatalog); return false;
++        }
+         pState->pToolCache = pNew;
+     }
+-    if ( !pState->pToolCache && pState->pAgent->iToolCount ) { return false; }
+-    for ( i = 0u; i < pState->pAgent->iToolCount; ++i ) {
+-        const xwork_tool_entry* pTool = &pState->pAgent->pTools[i];
++    if ( !pState->pToolCache && pCatalog->iToolCount ) {
++        xworkToolCatalogRelease(pCatalog); return false;
++    }
++    for ( i = 0u; i < pCatalog->iToolCount; ++i ) {
++        const xwork_tool_entry* pTool = &pCatalog->pTools[i];
+         pState->pToolCache[i].sName = pTool->sName;
+         pState->pToolCache[i].sDescription = pTool->sDescription;
+         pState->pToolCache[i].sParametersJson = pTool->sParametersJson;
+         pState->pToolCache[i].bStrict = pTool->bStrict;
+     }
+-    pState->iToolCacheCount = pState->pAgent->iToolCount;
+-    pState->uToolCacheGeneration = pState->pAgent->uToolRegistryGeneration;
++    pState->iToolCacheCount = pCatalog->iToolCount;
++    pState->uToolCacheGeneration = pCatalog->uGeneration;
++    pOld = pState->pToolCacheCatalog;
++    pState->pToolCacheCatalog = pCatalog;
++    xworkToolCatalogRelease(pOld);
+     return true;
+ }
+ 
+@@ -201,6 +215,7 @@
+         free(pState->sLastResult);
+         free(pState->pLastImage);
+         free(pState->pToolCache);
++        xworkToolCatalogRelease(pState->pToolCacheCatalog);
+         free(pState);
+     }
+     memset(pExecutor, 0, sizeof(*pExecutor));
