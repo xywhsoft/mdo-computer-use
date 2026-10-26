@@ -110,6 +110,10 @@ class Application:
             try:
                 result = self.request("/api/v1/bootstrap")
                 if result.get("data", {}).get("ready"):
+                    expected = json.loads((ROOT / "app/release.json").read_text(encoding="utf-8"))["version_name"]
+                    actual = result["data"].get("version")
+                    if actual != expected:
+                        raise RuntimeError(f"Deployed mdo version {actual} differs from source {expected}; run computer_use build")
                     return result["data"]
                 if result.get("data", {}).get("stage") == "failed":
                     raise RuntimeError("mdo bootstrap failed; inspect local log")
@@ -137,6 +141,8 @@ def main() -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     deploy_parser = commands.add_parser("deploy", help="Reuse one existing mdo executable")
     deploy_parser.add_argument("--mdo", type=Path, required=True)
+    build_parser = commands.add_parser("build", help="Build this checkout with one locked SDK export")
+    build_parser.add_argument("--xserver-repository", type=Path, required=True)
     driver_parser = commands.add_parser("driver", help="Install/verify the pinned official Cua ZIP")
     driver_parser.add_argument("--archive", type=Path, help="Reuse an existing official archive")
     config_parser = commands.add_parser("configure", help="Configure the project-local Cua connection")
@@ -147,6 +153,9 @@ def main() -> int:
     commands.add_parser("probe", help="Verify real mdo/Cua discovery and disconnect")
     commands.add_parser("install-template", help="Import the public template through the native mdo API")
     commands.add_parser("verify-template", help="Verify native template connection creation and removal")
+    acceptance_parser = commands.add_parser("acceptance", help="Run the real account model on the project test window")
+    acceptance_parser.add_argument("--model", default="ornith-1.5-35b")
+    acceptance_parser.add_argument("--timeout", type=int, default=300)
     for name in ("smoke", "run"):
         command = commands.add_parser(name)
         command.add_argument("--port", type=int, default=5391)
@@ -155,6 +164,14 @@ def main() -> int:
     try:
         if args.command == "deploy":
             print(json.dumps(deploy(args.mdo), indent=2))
+        elif args.command == "build":
+            from .build import build
+            print(build(args.xserver_repository))
+        elif args.command == "acceptance":
+            from .acceptance import run, summary
+            report = run(args.model, args.timeout)
+            print(json.dumps(summary(report), ensure_ascii=False, indent=2))
+            return 0 if report["passed"] else 1
         elif args.command in ("driver", "configure", "package", "probe", "install-template", "verify-template"):
             from . import driver
             if args.command == "driver":
@@ -192,7 +209,7 @@ def main() -> int:
                 state = app.ready()
                 if args.command == "smoke":
                     result = {"ready": state["ready"], "stage": state["stage"],
-                              "port": args.port, "home": str(HOME)}
+                              "version": state["version"], "port": args.port, "home": str(HOME)}
                     write_json(STATE / "smoke.json", result)
                     print(json.dumps(result, indent=2))
                 else:
@@ -201,7 +218,7 @@ def main() -> int:
         return 0
     except KeyboardInterrupt:
         return 130
-    except (OSError, ValueError, RuntimeError) as error:
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
         print(f"computer-use: {error}", file=sys.stderr)
         return 1
 

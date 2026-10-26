@@ -79,6 +79,33 @@ in source control. The available account model currently includes
 `ornith-1.5-35b` with image and tool capabilities; actual Agent execution is the
 next milestone.
 
+### Stage 4 — source-matched build and native acceptance runner
+
+The first real model run exposed that the initially reused executable reported
+0.6.0, while this checkout contains 0.7.0. That run exited abnormally during
+tool loading before it changed the test controls. It is not a completed desktop
+acceptance result or evidence that Cua caused the exit.
+
+The environment now builds the current checkout with the exact SDK lock. One
+streamed SDK source export is reused under `.build/computer-use/sdk`; there are
+no dependency worktrees or duplicate test deployments. The standard mdo build
+uses its existing locked SDK overlay, with no changes to Cua. Startup now
+rejects a deployed version that differs from `app/release.json`.
+
+```powershell
+python -m computer_use build --xserver-repository D:\GIT\xserver
+python -m computer_use smoke
+python -m computer_use acceptance --model ornith-1.5-35b
+```
+
+The fresh 0.7.0 application passes readiness, 63-tool Cua discovery and template
+lifecycle checks. The project Home limits parallel tools and subagents to one
+using the standard settings fields, matching this task's sequential constraint.
+The acceptance runner uses the existing account, ordinary default Agent and a
+normal user task against `tests/fixtures/computer-use-win32.c`. Its fixture is
+compiled once and reused; the app and Home remain in this checkout. A real
+model outcome is recorded separately from transport success.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Reuse an existing mdo
