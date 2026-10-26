@@ -32,9 +32,28 @@ export function renderSourceMarkdown(source) {
 
 // Attached scripts are part of the reviewed package, not just filenames.
 // Never execute or interpret their markup. Downloads retain the exact bytes.
+export async function decodePackageAttachment(file) {
+  if(typeof file.base64!=="string"||file.base64.length>90*1024*1024||!Number.isSafeInteger(file.size)||file.size<0||file.size>64*1024*1024||!/^[a-f0-9]{64}$/.test(file.sha256||""))throw Error("Invalid attachment");
+  const raw=atob(file.base64),packed=Uint8Array.from(raw,c=>c.charCodeAt(0));let bytes=packed;
+  if(file.encoding==="zlib"){
+    const reader=new Blob([packed]).stream().pipeThrough(new DecompressionStream("deflate")).getReader(),chunks=[];let size=0;
+    try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>file.size)throw Error("Attachment exceeds declared size");chunks.push(value);}}
+    catch(e){await reader.cancel().catch(()=>{});throw e;}
+    bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
+  }else if(file.encoding!=="identity")throw Error("Unsupported attachment encoding");
+  if(bytes.length!==file.size)throw Error("Attachment size mismatch");
+  const hash=await crypto.subtle.digest("SHA-256",bytes),actual=Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,"0")).join("");
+  if(actual!==file.sha256)throw Error("Attachment hash mismatch");return bytes;
+}
 export function renderPackageAttachment(file, labels = {}) {
   const make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
   const out=make("details");out.append(make("summary",file.path));
+  if(file.encoding){
+    out.append(make("p",`${file.size} B · SHA-256 ${file.sha256||""}`),make("p",labels.binary||"Download to inspect the original file."));
+    const download=make("button",labels.download||"Download file"),status=make("p");download.type="button";
+    download.onclick=async()=>{download.disabled=true;try{const bytes=await decodePackageAttachment(file),url=URL.createObjectURL(new Blob([bytes])),a=make("a");a.href=url;a.download=file.path.split("/").at(-1)||"file.bin";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){status.textContent=e.message;}finally{download.disabled=false;}};
+    out.append(download,status);return out;
+  }
   try {
     if(typeof file.base64!=="string" || file.base64.length>1400000)throw Error("Invalid attachment");
     const raw=atob(file.base64),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));

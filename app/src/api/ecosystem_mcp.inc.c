@@ -76,8 +76,9 @@ static bool EcoMcpDirectoryCollect(cstr Root,cstr Relative,xvalue* Files,size_t*
     if(Depth>16)return false;char Path[512];snprintf(Path,sizeof(Path),"%s%s%s",Root,Relative[0]?"/":"",Relative);
     xdir Dir=MdoHomeOpenDirectory(Path,XDIR_STAT);if(!Dir)return false;xdirentry E;xdirnext Next=XDIR_NEXT_END;bool Ok=true;
     while(Ok&&(Next=xrtDirNext(Dir,&E))==XDIR_NEXT_ITEM){char P[256],Full[512];int N=snprintf(P,sizeof(P),"%s%s%.*s",Relative,Relative[0]?"/":"",(int)E.Name.Size,E.Name.Data);
-        if(N<0||N>=sizeof(P)||!MdoPackagePath(P)){Ok=false;break;}
-        if(!Relative[0]&&(!strcmp(P,"mcp.json")||!strcmp(P,"template.json")))continue;
+        if(N<0||N>=sizeof(P)){Ok=false;break;}
+        if(!Relative[0]&&(!strcmp(P,"mcp.json")||!strcmp(P,"template.json")||P[0]=='.'))continue;
+        if(!MdoPackagePath(P)){Ok=false;break;}
         snprintf(Full,sizeof(Full),"%s/%s",Root,P);
         if(E.Info.Type==XFILE_TYPE_DIRECTORY){if(!strcmp(P,"cache")||!strcmp(P,"logs")||P[0]=='.')continue;Ok=EcoMcpDirectoryCollect(Root,P,Files,Total,Depth+1);}
         else if(E.Info.Type==XFILE_TYPE_FILE&&E.Info.Size<=MDO_MCP_DIRECTORY_FILE_BYTES&&xrtValueCount(Files)<MDO_MCP_DIRECTORY_FILES&&E.Info.Size<=MDO_MCP_DIRECTORY_BYTES-*Total){

@@ -63,8 +63,9 @@ static bool McpConnectionReferenceExists(cstr Reference,xroot Root,cstr Director
     xdir D=Root?xrtRootDirOpen(Root,Directory,XDIR_STAT):MdoHomeOpenDirectory(Directory,XDIR_STAT);
     if(!D){const xerror* E=xrtGetError();bool Missing=E&&xrtErrorKind(E)==XERR_NOT_FOUND;xrtClearError();return !Missing;}
     bool Found=false;xdirentry E;xdirnext Next=XDIR_NEXT_END;size_t Count=0;
-    while(!Found&&(Next=xrtDirNext(D,&E))==XDIR_NEXT_ITEM){if(E.Name.Size<6||E.Name.Size>69||memcmp(E.Name.Data+E.Name.Size-5,".json",5))continue;
-        if(++Count>256){Found=true;break;}char Path[192];snprintf(Path,sizeof(Path),"%s/%.*s",Directory,(int)E.Name.Size,E.Name.Data);bool Missing=false;
+    while(!Found&&(Next=xrtDirNext(D,&E))==XDIR_NEXT_ITEM){bool Folder=E.Info.Type==XFILE_TYPE_DIRECTORY;
+        if(Folder){if(!E.Name.Size||E.Name.Size>64)continue;}else if(E.Name.Size<6||E.Name.Size>69||memcmp(E.Name.Data+E.Name.Size-5,".json",5))continue;
+        if(++Count>256){Found=true;break;}char Path[192];snprintf(Path,sizeof(Path),"%s/%.*s%s",Directory,(int)E.Name.Size,E.Name.Data,Folder?"/mcp.json":"");bool Missing=false;
         char* Text=Root?SkillRead(Root,Path,&Missing):MdoExtensionRead(Path,true,MDO_EXTENSION_TEXT_LIMIT,&Missing);Found=!Text||strstr(Text,Reference)!=NULL;xrtFree(Text);}
     if(Next==XDIR_NEXT_ERROR)Found=true;
     xrtDirClose(D);return Found;
@@ -110,6 +111,7 @@ bool MdoApiMcpTemplatesRoute(MdoApiContext* C)
     xvalue* Data=xrtValueObject();Ok=Ok&&Data&&xrtValueObjectSet(Data,XRT_STR_LITERAL("items"),Items);xrtValueRelease(Items);xrtValueRelease(Records);xrtMutexUnlock(g_MdoExtensionLock);
     if(!Ok){xrtValueRelease(Data);return MdoApiReplyError(C,503,"mcp_templates_unavailable","Template receipts cannot be verified",NULL);}return MdoApiReplySuccessTake(C,200,Data,NULL);
 }
+#include "mcp_directory_authoring.inc.c"
 bool MdoApiMcpConnectionsRoute(MdoApiContext* C)
 {
     MdoApiJsonBody Body={0};MdoApiBodyStatus Read=MdoApiJsonBodyRead(C,&Body);if(Read!=MDO_API_BODY_OK)return MdoApiReplyBodyError(C,Read);
@@ -130,6 +132,13 @@ bool MdoApiMcpConnectionsRoute(MdoApiContext* C)
     char* Text=NULL;char References[32][MDO_SECRET_VAULT_REFERENCE_CAPACITY];size_t RefCount=0;bool Saved=false,Preview=!strcmp(Action,"preview");
     if((Workspace&&!Lock)||(!Old&&!Missing)){snprintf(Error,sizeof(Error),"Existing configuration cannot be read safely");goto done;}
     if(!ExtensionMatch(C,Old)){Result=true;goto done;}
+    if(!strcmp(Action,"copy_program")){
+        if(!MdoMcpTemplateFlag(Body.Value,"confirm_copy",false)){snprintf(Error,sizeof(Error),"Confirm the selected program directory before copying");goto done;}
+        if(Workspace||!Old){snprintf(Error,sizeof(Error),"Select an existing personal MCP connection");goto done;}
+        if(!ExtensionStoreCanCustomize(C,"mcp",Id)){Result=true;goto done;}
+        bool Ok=McpCopyProgramDirectory(Id,Path,Old,OldDoc,MdoPackageText(Body.Value,"directory",4096),Error);
+        if(Ok)Result=MdoApiReplySuccessTake(C,200,ExtensionItem("mcp",Id,true),NULL);goto done;
+    }
     if(!strcmp(Action,"delete")){
         if(!Old){snprintf(Error,sizeof(Error),"Connection no longer exists");goto done;}
         Saved=Workspace?xrtRootRemove(Root,Path):MdoHomeRemove(Path,false);

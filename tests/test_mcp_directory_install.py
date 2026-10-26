@@ -44,12 +44,12 @@ class NativeApp:
         self.config.write_text(json.dumps(dict(services=[dict(enabled=True,**{"class":"http"},name="mcp-directory",ip="127.0.0.1",port=self.port,
             host_default=dict(enabled=True,name="mdo",path="web",devlang="c",devfile="generated/mcp_directory_app_test.c"))])))
         self.token="";self.child=None
-    def request(self,path,body=None,status=200,revision=None):
+    def request(self,path,body=None,status=200,revision=None,method=None):
         headers={"Content-Type":"application/json"}
         if body is not None:headers["X-Mdo-Write-Token"]=self.token
         if revision:headers["If-Match"]='"'+revision+'"'
         req=urllib.request.Request(f"http://127.0.0.1:{self.port}/api/v1"+path,
-            data=json.dumps(body,ensure_ascii=False).encode() if body is not None else None,headers=headers)
+            data=json.dumps(body,ensure_ascii=False).encode() if body is not None else None,headers=headers,method=method)
         try:r=urllib.request.urlopen(req,timeout=180)
         except urllib.error.HTTPError as e:r=e
         raw=r.read();assert r.status==status,(path,r.status,raw[:3000])
@@ -77,6 +77,18 @@ def main():
     (ROOT/".build").mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="mcp-install-",dir=ROOT/".build") as raw:
         with NativeApp(Path(raw),args.host) as app:
+            from test_mcp_runtime import server_document
+            selected=Path(raw)/"program";selected.mkdir();(selected/"entry.exe").write_bytes(b"source executable");(selected/"dependency.dll").write_bytes(b"dependency")
+            original=json.loads(server_document(str(selected/"entry.exe"),"one","two",server_id="author"));original["enabled"]=False;original["transport"]["environment"]=[]
+            authored=app.request("/extensions/mcp/author",dict(content=json.dumps(original)),revision="new",method="PUT")
+            app.request("/mcp/connections",dict(action="copy_program",id="author",directory=str(Path(raw)),confirm_copy=False),revision=authored["revision"],status=409)
+            app.request("/mcp/connections",dict(action="copy_program",id="author",directory=str(selected),confirm_copy=True),revision=authored["revision"])
+            author_root=app.home/"mcp/author";assert (author_root/"dependency.dll").read_bytes()==b"dependency" and (selected/"entry.exe").exists()
+            assert not (app.home/"mcp/author.json").exists()
+            authored=json.loads((author_root/"mcp.json").read_text(encoding="utf-8"));assert authored["transport"]["program"]=="./entry.exe"
+            (author_root/".env").write_text("private-marker-do-not-publish")
+            authored_export=app.request("/ecosystem",dict(action="export",single_kind="mcp",references=[dict(kind="mcp",id="author")]))
+            assert {f["path"] for f in authored_export["resources"][0]["files"]}=={"entry.exe","dependency.dll"}
             p=package();bundle=app.home/"mcp/folder-fixture"
             def store(action,**extra):return app.request("/ecosystem",dict(action=action,single_kind="mcp",**extra))
             plan=store("plan_import",package=p);assert not bundle.exists()

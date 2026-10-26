@@ -195,6 +195,7 @@ export function createSingleResourceStore(kind, onChange, onBrowse = () => {}, o
       }
       let recipeSource=null;
       if(kind==="mcp"){
+        const files=exported.resources[0].files||[];if(files.length){const tree=node("details");tree.append(node("summary",`随包程序文件（${files.length}）`));for(const f of files)tree.append(node("p",`${f.path} · ${f.size} B · ${f.sha256}`));form.append(tree);}
         recipeSource=element("textarea",{className:"extension-source",attrs:{"aria-label":"公开 MCP 服务模板",spellcheck:"false"}});recipeSource.value=exported.resources[0].content;
         const preview=node("div");form.append(node("h3","公开模板与参数"),node("p","本机地址、参数和授权信息已清空。将通用参数改成公开常量，保留需要安装用户填写的输入。请检查最终上传的全部 JSON。"),recipeSource,button("预览安装表单",()=>{try{const recipe=parseMcpTemplate(recipeSource.value);preview.replaceChildren();for(const v of recipe.variants){preview.append(node("h4",v.label));for(const i of mcpVariantInputs(recipe,v)){const c=element(i.type==="select"?"select":"input",{attrs:{type:i.secret?"password":"text",placeholder:i.secret?"用户在本机填写":i.default||""}});if(i.type==="select")for(const o of i.options||[])c.append(element("option",{text:o}));preview.append(element("label",{},[node("span",`${i.label}${i.required?" · 必填":""}${i.secret?" · 私密":""}`),c,node("small",i.description||"")]));}}}catch(e){preview.replaceChildren(node("p",errorMessage(e),"extension-error"));}}),preview);
       }

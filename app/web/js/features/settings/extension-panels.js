@@ -7,6 +7,7 @@ import { createMcpContext } from "./mcp-context.js";
 import { createMcpAuthorization } from "./mcp-authorization.js";
 import { createMcpConnections } from "./mcp-connections.js";
 import { createMcpWorkbench } from "./mcp-workbench.js";
+import { createMcpDirectoryAuthoring } from "./mcp-directory-authoring.js";
 import { newTool } from "./tool-template.js";
 import { newCommand } from "./command-template.js";
 import { createCommandWorkbench } from "./command-workbench.js";
@@ -61,6 +62,7 @@ export function createExtensionPanels() {
   const mcpContext = createMcpContext();
   const mcpAuthorization = createMcpAuthorization();
   const mcpConnections = createMcpConnections(() => { announceChange("mcp"); if(selected==="mcp")void load("mcp"); });
+  const mcpDirectory=createMcpDirectoryAuthoring(()=>{announceChange("mcp");if(selected==="mcp")void load("mcp");});
   const mcpWorkbench = createMcpWorkbench({ onChange: () => announceChange("mcp"), onConfigure:(item,project)=>mcpConnections.open({item,project}),onShare:item=>stores.get("mcp").publish(item) });
   const commandWorkbench = createCommandWorkbench({ owner: roots.get("commands"), onChange: () => announceChange("commands"), onShare: item => stores.get("commands").publish(item) });
   const stores = new Map(["agents", "subagents", "skills", "tools", "commands", "mcp", "knowledge"].map(kind => [kind, createSingleResourceStore(kind, () => { announceChange(kind); if (selected === kind) void load(kind); }, () => { states.get(kind).area = "store"; render(kind); }, async receipt => {
@@ -230,6 +232,7 @@ export function createExtensionPanels() {
           await api.post(`${path(kind, item.id)}/enabled`, { enabled: !item.enabled }, revision(item));
         }));
         const controls = editable ? [edit, button(label("export", "导出"), () => exportItem(kind, item))] : [];
+        if(kind==="mcp"&&editable&&item.valid&&!item.path?.endsWith("/mcp.json"))controls.push(button("复制程序到 MCP 目录",()=>mcpDirectory.open(item)));
         if (["agents","subagents"].includes(kind)) controls.push(button("上下文预览",()=>openRolePlan({kind,id:item.id,owner:roots.get(kind)})));
         if (store && item.valid && item.shareable!==false && editable && !(kind==="agents"&&item.id==="default")) controls.push(button("分享到创作中心", () => store.publish(item, owner)));
         if (store) controls.push(...store.localActions(owner));
@@ -653,7 +656,11 @@ export function createExtensionPanels() {
         if(isCurrent())download(`${item.id}.role.json`,JSON.stringify(data.resources[0],null,2));return;
       }
       if(kind==="knowledge"){const data=(await api.get(`${path(kind,item.id)}/bundle`)).data;download(`${item.id}.knowledge.json`,JSON.stringify({kind,id:item.id,content:data.content,files:data.files},null,2));return;}
-      if(kind==="mcp"){const data=(await api.post("/ecosystem",{action:"export",single_kind:"mcp",references:[{kind,id:item.id}]})).data;if(isCurrent())download(`${item.id}.mcp-template.json`,data.resources[0].content);return;}
+      if(kind==="mcp"){const data=(await api.post("/ecosystem",{action:"export",single_kind:"mcp",references:[{kind,id:item.id}]})).data;if(!isCurrent())return;
+        const resource=data.resources[0];if(!resource.files){download(`${item.id}.mcp-template.json`,resource.content);return;}
+        const template=JSON.parse(resource.content),platforms=[...new Set(template.variants.flatMap(v=>v.platforms))];
+        const p=makeStorePackage({slug:`mcp-${item.id}`.slice(0,64),name:item.name||item.id,version:item.version||"1.0.0",description:item.description||"本机 MCP 程序",readme:"安装后检查启动参数并配置凭据，再启用连接。",license:item.license||"UNLICENSED",platforms},data.resources);
+        download(`${item.id}.mdo-extension.json`,JSON.stringify(p));return;}
       const data = (await reads.read(`export:${kind}/${item.id}`, `${path(kind, item.id)}${kind === "skills" ? "/bundle" : ""}`, { isCurrent })).data;
       if (!isCurrent()) return;
       if (kind === "skills") download(`${item.id}.skill.json`, JSON.stringify({ kind, id: item.id, content: data.content, files: data.files }, null, 2));
@@ -691,7 +698,7 @@ export function createExtensionPanels() {
       if (selected && (!states.get(kind).loaded || kind === "tools") && !states.get(kind).busy) void load(kind);
       else if(pendingResource?.kind===selected)void openLinkedResource();
     },
-    hasPendingChanges: () => [...stores.values()].some(s => s.hasPendingChanges()) || dirty() || knowledgeEditor.hasPendingChanges() || skillWorkbench.hasPendingChanges() || mcpWorkbench.hasPendingChanges() || mcpConnections.hasPendingChanges() || commandWorkbench.hasPendingChanges(),
-    destroy() { disposed = true; for (const browser of browsers.values()) browser.destroy(); for (const store of stores.values()) store.destroy(); knowledgeEditor.destroy(); skillWorkbench.destroy(); mcpWorkbench.destroy(); mcpConnections.destroy(); commandWorkbench.destroy(); mcpAuthorization.destroy(); mcpContext.destroy(); cancelReads(); closeEditor(true); unsubscribeLocale(); unsubscribeTarget();window.removeEventListener("mdo-extensions-changed", invalidate);window.removeEventListener("mdo-open-resource",openResource);window.removeEventListener("pagehide",onHide);window.removeEventListener("pageshow",onShow); },
+    hasPendingChanges: () => [...stores.values()].some(s => s.hasPendingChanges()) || dirty() || knowledgeEditor.hasPendingChanges() || skillWorkbench.hasPendingChanges() || mcpWorkbench.hasPendingChanges() || mcpConnections.hasPendingChanges() || mcpDirectory.hasPendingChanges() || commandWorkbench.hasPendingChanges(),
+    destroy() { disposed = true; for (const browser of browsers.values()) browser.destroy(); for (const store of stores.values()) store.destroy(); knowledgeEditor.destroy(); skillWorkbench.destroy(); mcpWorkbench.destroy(); mcpConnections.destroy(); mcpDirectory.destroy(); commandWorkbench.destroy(); mcpAuthorization.destroy(); mcpContext.destroy(); cancelReads(); closeEditor(true); unsubscribeLocale(); unsubscribeTarget();window.removeEventListener("mdo-extensions-changed", invalidate);window.removeEventListener("mdo-open-resource",openResource);window.removeEventListener("pagehide",onHide);window.removeEventListener("pageshow",onShow); },
   });
 }

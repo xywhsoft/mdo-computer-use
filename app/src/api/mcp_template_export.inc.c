@@ -26,7 +26,7 @@ static char* McpTemplateExportMode(cstr Content,cstr Id,bool Directory)
     if(Ok&&!strcmp(Type,"streamable-http"))Ok=McpTemplateReplace(Tr,"endpoint",Inputs,"endpoint","服务地址（HTTPS）",false,false);
     else if(Ok&&!strcmp(Type,"stdio")){
         cstr Program=MdoPackageText(Original,"program",4096);
-        Ok=(Directory?(MdoMcpDirectoryEntry(Program)&&MdoApiValueSetString(Tr,"program",Program)):McpTemplateReplace(Tr,"program",Inputs,"program","可执行文件路径或已安装的命令",false,false))&&MdoApiValueSetBool(Tr,"inherit_environment",false);
+        Ok=(Directory?(MdoMcpDirectoryEntry(Program)&&MdoApiValueSetString(Tr,"program",Program)):McpTemplateReplace(Tr,"program",Inputs,"program","可执行文件路径或已安装的命令",false,false))&&MdoApiValueSetBool(Tr,"inherit_environment",Directory&&MdoMcpTemplateFlag(Original,"inherit_environment",false));
         const xvalue* Old=xrtValueObjectGet(Original,XRT_STR_LITERAL("arguments"));xvalue* A=xrtValueArray();
         for(size_t i=0;Ok&&i<xrtValueCount(Old);i++){char Key[32],Label[64];snprintf(Key,sizeof(Key),"argument-%zu",i);snprintf(Label,sizeof(Label),"启动参数 %zu",i+1);xvalue* E=xrtValueObject();
             Ok=McpTemplateDeclare(Inputs,Key,Label,false)&&MdoApiValueSetString(E,"input",Key)&&xrtValueArrayAppend(A,E);xrtValueRelease(E);}
