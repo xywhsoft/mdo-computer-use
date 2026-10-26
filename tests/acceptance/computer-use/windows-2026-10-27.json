@@ -1,0 +1,45 @@
+{
+  "native_form": {
+    "model": "ornith-1.5-35b",
+    "backend": "official Cua 0.38.0 through mdo MCP",
+    "prompt_workarounds": false,
+    "protocol_requested": null,
+    "scenario": "form",
+    "passed": true,
+    "checks": {
+      "run_succeeded": true,
+      "button_once": true,
+      "visual_code": true,
+      "screenshot_retained": true,
+      "text": true,
+      "checkbox": true,
+      "selection": true
+    },
+    "elapsed_seconds": 694.48,
+    "session_id": "V--u87gO68IDZHoqWPvg_EjOAJFSVzyB",
+    "run_id": "run-V--u87gO6kdnBrz8L6Pd8Aqw3z6lZhDk",
+    "oracle": {
+      "pid": 106124,
+      "window_id": 9965510,
+      "foreground": 9965510,
+      "clicks": 1,
+      "canvas_clicks": 0,
+      "right_clicks": 0,
+      "checked": true,
+      "scroll_line": 0,
+      "text": "墨斗 Computer Use 验收",
+      "selection": "Green",
+      "visual_code": "775493"
+    },
+    "schema_version": 1,
+    "tested_on": "2026-10-27",
+    "cua_modified": false,
+    "agent_retries_added": false,
+    "host_fix": "6c827af",
+    "model_calls": 51,
+    "tool_calls": 50,
+    "final_text": "所有操作已完成并确认。让我仔细查看蓝色画布中的 Visual code。\n\n从最新截图中的蓝色画布可以读出：\n- **CANVAS TARGET**\n- **Visual code: 775493**\n- Left: 0 Right: 0\n\n所有验收操作已全部完成。下面是结果报告：\n\n---\n\n## ✅ MDO Computer Use 验收 — 操作结果报告\n\n**目标窗口**：MDO Computer Use Acceptance（pid: 106124, window_id: 9965510）\n\n### 已执行的的操作\n\n| 操作 | 目标 | 结果 |\n|------|------|------|\n| **① 输入文本** | Input text 编辑框 | ✅ 成功写入「墨斗 Computer Use 验收」（已读回确认） |\n| **② 点击 Increment counter** | 计数器按钮（UIA Invoke，后台投递） | ✅ 计数从 `0` → `1` |\n| **③ 勾选 Enable option** | 复选框（TogglePattern，前台投递） | ✅ 已勾选（✓ 确认） |\n| **④ 设置 Color** | Color 下拉框（set_value → CB_SETCURSEL） | ✅ 从 `Red` 改为 `Green`（读回确认 index=1） |\n\n### 🎯 蓝色画布 Visual code 读取结果\n\n```\nCANVAS TARGET\nVisual code: 775493\nLeft: 0  Right: 0\n```\n\n**六位 Visual code = `775493`**\n\n### 备注\n- 操作 Color 时 UIA provider 一度返回空树（`BuildUpdatedCache failed`），通过 `bring_to_front` 将窗口激活并延长超时后成功恢复，最终用 `set_value` 正确设置 Green。\n- 全程仅操作了目标测试窗口，未触碰其他应用。",
+    "gui_tools_only": false,
+    "post_click_image": true
+  }
+}

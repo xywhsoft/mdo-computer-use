@@ -306,3 +306,7 @@ issue and a cancellation delay on ordinary stdio `verify_state`. They remain
 unmodified and will be measured separately. Current mdo forwards one supported
 MCP image up to 1 MiB to the model; tests must distinguish a returned screenshot
 from a screenshot actually reaching the model.
+
+### 2026-10-27 完整桌面模型验收
+
+Responses 工具 strict 值按定义显式传递后，使用同一完整任务和现有账号模型 ornith-1.5-35b 通过中文输入、一次点击、复选框、Green 下拉项和截图验证码。耗时 694.48 秒，51 次模型调用、50 次工具调用。模型自行从 UIA 缓存错误恢复，未添加提示词、重试策略或 Cua 修改；单次通过不代表稳定性与效率达标。完整浏览器、录屏、视觉扩展及工具逐项覆盖仍在验收。证据：tests/acceptance/computer-use/windows-2026-10-27.json。
