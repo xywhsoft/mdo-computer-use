@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "tested_on": "2026-10-26",
+  "platform": "windows-x86_64",
+  "mdo_version": "0.7.0",
+  "baseline": "fdd32d6b",
+  "sdk_base": "216f5445163ca30c815ad7d5d2da3b71cb2f6401",
+  "sdk_overlay_sha256": "05d80e6aab33b9466c2b3b8815f3746584e78fcba0f759362f9e622c7585092d",
+  "cua": {
+    "version": "0.38.0",
+    "source_commit": "85e2b1318bd77ccf3cfa88ccdf875a4bb7eaed19",
+    "archive_sha256": "5edaa74d0afa1b55a9668dbc4f32736507bd2bd4d75b18ca1dc8881bb12402b5",
+    "official_files_verified": true,
+    "code_modified": false,
+    "tools_loaded": 63
+  },
+  "extra_agent_prompts_or_skills": false,
+  "automatic_agent_retries_added": false,
+  "native_regressions": {
+    "catalog_lifetime": "PASS",
+    "responses_tool_output_forms": 5
+  },
+  "deterministic": {
+    "desktop": {
+      "passed": true,
+      "checks": {
+        "window_image": true,
+        "final_image": true,
+        "text": true,
+        "button_once": true,
+        "checkbox": true,
+        "selection": true,
+        "pixel_click": true,
+        "full_catalog": true
+      }
+    },
+    "browser": {
+      "passed": true,
+      "checks": {
+        "initial_image": true,
+        "stale_ref_refused": true,
+        "text": true,
+        "button_once": true,
+        "checkbox": true,
+        "selection": true,
+        "scroll": true,
+        "final_image": true,
+        "exact_binding": true,
+        "owned_windows_closed": true
+      }
+    },
+    "existing_profile_grant": {
+      "passed": true,
+      "checks": {
+        "ungranted_refused": true,
+        "explicit_grant_accepted": true,
+        "text": true,
+        "exact_binding": true,
+        "screenshot": true,
+        "external_browser_preserved": true,
+        "owned_profile_removed": true
+      }
+    }
+  },
+  "real_model_cases": {
+    "desktop_click_responses": {
+      "model": "ornith-1.5-35b",
+      "protocol": "openai-responses",
+      "passed": true,
+      "checks": {
+        "run_succeeded": true,
+        "button_once": true,
+        "visual_code": true,
+        "screenshot_retained": true,
+        "post_click_image": true,
+        "gui_tools_only": true,
+        "final_visual_code": true
+      },
+      "elapsed_seconds": 172.62,
+      "state": "succeeded",
+      "error_code": "none",
+      "model_calls": 11,
+      "tool_calls": 10
+    },
+    "desktop_form_responses": {
+      "model": "ornith-1.5-35b",
+      "protocol": "openai-responses",
+      "passed": false,
+      "checks": {
+        "run_succeeded": false,
+        "text": false,
+        "button_once": false,
+        "checkbox": false,
+        "selection": false,
+        "visual_code": true,
+        "screenshot_retained": true
+      },
+      "elapsed_seconds": 184.11,
+      "state": "failed",
+      "error_code": "loop_guard",
+      "model_calls": 22,
+      "tool_calls": 31
+    },
+    "desktop_form_chat": {
+      "model": "ornith-1.5-35b",
+      "protocol": "openai-chat-completions",
+      "passed": false,
+      "checks": {
+        "run_succeeded": false,
+        "text": true,
+        "button_once": true,
+        "checkbox": true,
+        "selection": false,
+        "visual_code": false,
+        "screenshot_retained": true
+      },
+      "elapsed_seconds": 300.89,
+      "state": "timed_out",
+      "error_code": "timeout",
+      "model_calls": 25,
+      "tool_calls": 43
+    },
+    "desktop_form_anthropic": {
+      "model": "ornith-1.5-35b",
+      "protocol": "anthropic-messages",
+      "passed": false,
+      "checks": {
+        "run_succeeded": false,
+        "text": false,
+        "button_once": false,
+        "checkbox": false,
+        "selection": false,
+        "visual_code": false,
+        "screenshot_retained": false
+      },
+      "elapsed_seconds": 300.19,
+      "state": "timed_out",
+      "error_code": "timeout",
+      "model_calls": 1,
+      "tool_calls": 0
+    },
+    "browser_form_responses": {
+      "model": "ornith-1.5-35b",
+      "protocol": "openai-responses",
+      "passed": false,
+      "checks": {
+        "run_succeeded": false,
+        "text": false,
+        "button_once": false,
+        "checkbox": false,
+        "selection": false,
+        "scroll": false,
+        "screenshot_retained": true
+      },
+      "elapsed_seconds": 301.16,
+      "state": "timed_out",
+      "error_code": "timeout",
+      "model_calls": 30,
+      "tool_calls": 38
+    }
+  },
+  "deferred": [
+    "Cua UWP inner/outer-window geometry and capture issue",
+    "Cua ordinary stdio cancellation latency",
+    "Complex task autonomy and protocol-dependent model behavior",
+    "Linux/macOS launch profiles and device acceptance"
+  ]
+}

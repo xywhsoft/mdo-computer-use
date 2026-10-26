@@ -9,6 +9,21 @@ transport with protocol `2026-07-28`. Windows is the first validated platform;
 Linux and macOS will use platform-specific launch profiles. No additional Agent
 prompt, Skill, recovery policy, or Cua compatibility patch is installed.
 
+## Delivery status — 2026-10-26
+
+The Windows integration is implemented and source-built. The official 63-tool
+catalog is available, both template variants pass native connection lifecycle
+validation, and 25 deterministic desktop/browser/authorization checks pass.
+The existing account model completes a real single-click and post-action visual
+feedback task on the default Responses route. Complex form/browser tasks still
+have the separately recorded failures below. Linux/macOS are extension points,
+not device-validated targets. Recording/perception and every individual tool
+have not all been exercised; 63 is the discovered schema count.
+
+Start with the [Chinese operating guide](docs/computer-use.md). The sanitized
+[machine-readable acceptance record](tests/acceptance/computer-use/windows-2026-10-26.json)
+contains both successes and failures without account credentials or runtime IDs.
+
 ## Milestones
 
 1. Deploy and smoke-test mdo directly in this checkout, reusing a local executable.
