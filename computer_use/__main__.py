@@ -158,6 +158,7 @@ def main() -> int:
     acceptance_parser.add_argument("--timeout", type=int, default=300)
     acceptance_parser.add_argument("--scope", choices=("desktop", "browser"), default="desktop")
     acceptance_parser.add_argument("--protocol", choices=("openai-responses", "openai-chat-completions", "anthropic-messages"))
+    acceptance_parser.add_argument("--scenario", choices=("form", "click"), default="form")
     check_parser = commands.add_parser("transport-check", help="Exercise native Cua desktop/browser actions without a model")
     check_parser.add_argument("--scope", choices=("desktop", "browser", "all"), default="all")
     for name in ("smoke", "run"):
@@ -175,7 +176,11 @@ def main() -> int:
             from .acceptance import run, summary
             if args.scope == "browser":
                 from .browser_check import model_acceptance as run
-            report = run(args.model, args.timeout, args.protocol)
+                if args.scenario != "form":
+                    raise ValueError("The click scenario applies to desktop acceptance only")
+                report = run(args.model, args.timeout, args.protocol)
+            else:
+                report = run(args.model, args.timeout, args.protocol, args.scenario)
             print(json.dumps(summary(report), ensure_ascii=False, indent=2))
             return 0 if report["passed"] else 1
         elif args.command == "transport-check":

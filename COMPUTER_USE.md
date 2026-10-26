@@ -208,6 +208,28 @@ explicit compatibility comparisons; it does not alter defaults or add retries.
 Separate protocol reports preserve earlier outcomes. Autonomous completion with
 the current account model is not yet established by either default-route task.
 
+### Stage 12 — protocol comparison and a completed real closed loop
+
+The same model's Anthropic Messages route timed out on its first model request
+at 300.19 seconds, before any tool call. Chat Completions made real progress:
+the independent oracle confirms Chinese input, one button click and checkbox
+selection. That form run timed out at 300.89 seconds (25 model calls / 43 tools)
+while resolving the dropdown, so it is still a failed complete-form test.
+
+A separate, ordinary single-click/read-image task **passed** on the default
+Responses route in 172.62 seconds (11 model calls / 10 tools). The real account
+model found the window, clicked once, re-read it, and reported `Counter: 1`
+and the fresh six-digit canvas code in its final answer. The oracle confirms
+one click, an image arrived after the click, and only discovery/loading/Cua
+tools were used; the model did not read the fixture source or oracle file.
+
+```powershell
+python -m computer_use acceptance --scenario click
+```
+
+This establishes a real model/action/visual-feedback loop without additional
+prompts or retries. It does not make the failed form or browser tasks pass.
+
 ## Local environment
 
 Python 3.12+ is sufficient for the integration commands. Build this checkout's

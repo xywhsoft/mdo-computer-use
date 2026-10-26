@@ -36,6 +36,24 @@ def wait_account(app) -> None:
     raise RuntimeError("Sign in to the project mdo Home before real-model acceptance")
 
 
+def collect_evidence(report: dict) -> None:
+    snapshot = HOME / "sessions/default" / report["session_id"] / "snapshot.json"
+    entries = read_oracle(snapshot)["entries"]
+    report["tool_names"] = [call.get("name") for entry in entries
+                            for call in entry.get("tool_calls", [])]
+    report["image_parts"] = [{"media_type": part.get("media_type"), "bytes": part.get("data_bytes")}
+                             for entry in entries for part in entry.get("parts", [])
+                             if part.get("kind") == 2]
+    report["assistant_text"] = "\n".join(entry.get("content") or "" for entry in entries
+                                          if entry.get("role") == 2)[-8192:]
+    clicks = [i for i, entry in enumerate(entries) if any(
+        c.get("name") == "mcp__cua-driver__click" for c in entry.get("tool_calls", []))]
+    report["post_click_image"] = bool(clicks) and any(
+        any(p.get("kind") == 2 for p in entry.get("parts", [])) for entry in entries[clicks[-1] + 1:])
+    report["gui_tools_only"] = all(name in ("tool_search", "tool_load") or
+        name.startswith("mcp__cua-driver__") for name in report["tool_names"])
+
+
 def run_task(app, report: dict, title: str, prompt: str, timeout: float) -> dict:
     config = {
         "project_id": "default", "title": title, "agent_id": "mdo.default",
@@ -71,19 +89,12 @@ def run_task(app, report: dict, title: str, prompt: str, timeout: float) -> dict
         if not active.get("terminal"):
             app.request("/api/v1/runs/" + run_id, "DELETE")
     # Keep ordinary session history in Home; only duplicate compact evidence.
-    snapshot = HOME / "sessions/default" / sid / "snapshot.json"
-    entries = read_oracle(snapshot)["entries"]
-    report["tool_names"] = [call.get("name") for entry in entries
-                            for call in entry.get("tool_calls", [])]
-    report["image_parts"] = [{"media_type": part.get("media_type"), "bytes": part.get("data_bytes")}
-                             for entry in entries for part in entry.get("parts", [])
-                             if part.get("kind") == 2]
-    report["assistant_text"] = "\n".join(entry.get("content") or "" for entry in entries
-                                          if entry.get("role") == 2)[-8192:]
+    collect_evidence(report)
     return active
 
 
-def run(model: str = "ornith-1.5-35b", timeout: float = 300, protocol: str | None = None) -> dict:
+def run(model: str = "ornith-1.5-35b", timeout: float = 300, protocol: str | None = None,
+        scenario: str = "form") -> dict:
     if os.name != "nt":
         raise RuntimeError("This desktop acceptance fixture currently validates Windows only")
     STATE.mkdir(parents=True, exist_ok=True)
@@ -92,7 +103,8 @@ def run(model: str = "ornith-1.5-35b", timeout: float = 300, protocol: str | Non
     oracle.unlink(missing_ok=True)
     fixture = subprocess.Popen([str(binary), str(oracle)], cwd=ROOT)
     report = {"model": model, "backend": "official Cua 0.38.0 through mdo MCP",
-              "prompt_workarounds": False, "fixture_pid": fixture.pid, "protocol_requested": protocol}
+              "prompt_workarounds": False, "fixture_pid": fixture.pid,
+              "protocol_requested": protocol, "scenario": scenario}
     try:
         with Application() as app:
             app.ready()
@@ -101,15 +113,23 @@ def run(model: str = "ornith-1.5-35b", timeout: float = 300, protocol: str | Non
                 "请使用 Computer Use，在“MDO Computer Use Acceptance”窗口中输入“墨斗 Computer Use 验收”，"
                 "点击 Increment counter 一次，勾选 Enable option，并将 Color 选择为 Green。"
                 "最后查看窗口截图，读出蓝色画布里的六位 Visual code 并报告结果。只操作这个测试窗口。")
+            if scenario == "click":
+                prompt = ("请使用 Computer Use，点击“MDO Computer Use Acceptance”窗口中的 Increment counter 一次，"
+                    "随后查看窗口截图，报告 Counter 的数值和蓝色画布里的六位 Visual code。只操作这个测试窗口。")
             try:
                 active = run_task(app, report, "Computer Use native acceptance", prompt, timeout)
                 state = report["oracle"] = read_oracle(oracle)
                 report["checks"] = {"run_succeeded": active.get("state") == "succeeded",
-                    "text": state.get("text") == "墨斗 Computer Use 验收",
-                    "button_once": state.get("clicks") == 1, "checkbox": state.get("checked") is True,
-                    "selection": state.get("selection") == "Green",
+                    "button_once": state.get("clicks") == 1,
                     "visual_code": state["visual_code"] in report["assistant_text"],
                     "screenshot_retained": bool(report["image_parts"])}
+                if scenario == "form":
+                    report["checks"].update(text=state.get("text") == "墨斗 Computer Use 验收",
+                        checkbox=state.get("checked") is True, selection=state.get("selection") == "Green")
+                else:
+                    report["checks"].update(post_click_image=report["post_click_image"],
+                        gui_tools_only=report["gui_tools_only"],
+                        final_visual_code=state["visual_code"] in (active.get("final_text") or ""))
                 report["passed"] = all(report["checks"].values())
             finally:
                 app.request("/api/v1/mcp/cua-driver/disconnect", "POST")
@@ -118,7 +138,8 @@ def run(model: str = "ornith-1.5-35b", timeout: float = 300, protocol: str | Non
         report.update(passed=False, error=str(error))
         return report
     finally:
-        write_json(STATE / ("native-acceptance" + ("-" + protocol if protocol else "") + ".json"), report)
+        suffix = ("-" + protocol if protocol else "") + ("-" + scenario if scenario != "form" else "")
+        write_json(STATE / ("native-acceptance" + suffix + ".json"), report)
         if fixture.poll() is None:
             fixture.terminate()
             fixture.wait(timeout=5)
