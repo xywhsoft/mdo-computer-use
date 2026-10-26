@@ -318,3 +318,7 @@ Responses 工具 strict 值按定义显式传递后，使用同一完整任务�
 ### 2026-10-27 服务发现元数据
 
 完整浏览器任务的一次独立复测未进入 Cua：模型搜索 browser / computer use 时，原描述仅 Cua Driver desktop automation，与任一检索词都不匹配。native tool_search 按服务 ID/description 搜索，并不搜索展示 name。现将插件 description 补全为准确中英文能力说明（Computer Use / browser / 浏览器等），模板版本 0.1.2；仅改服务元数据，无行为提示、Skill 或重试策略。保留未完成会话证据。
+
+### 2026-10-27 完整浏览器模型验收
+
+服务描述完善后，同一用户任务通过：现有账号 ornith-1.5-35b / Responses，临时浏览器真实完成中文输入、Apply 一次、勾选、Green、滚动 2000px，工具截图进入模型上下文。耗时 607.81 秒，51 次模型调用、63 次工具调用。独立 HTTP oracle 和实际图片 parts 用于判定；模型最终文本生成了无效的 base64 图片，不将其当作截图证据，保留为模型输出质量限制。无新增 Agent 提示、Skill、重试策略或 Cua 修改。

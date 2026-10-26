@@ -65,5 +65,42 @@
     "session_id": "V--u87gmHo55Ex3QJ10uGfXK4cohEjBl",
     "run_id": "run-V--u87gmIHU9FyDfE4jGxkxiUo0r0xoq",
     "reason": "Stopped after Computer Use/browser searches returned no summary match. MCP indexes server id and description; old description contained neither query."
+  },
+  "browser_form": {
+    "passed": true,
+    "checks": {
+      "run_succeeded": true,
+      "text": true,
+      "button_once": true,
+      "checkbox": true,
+      "selection": true,
+      "scroll": true,
+      "screenshot_retained": true
+    },
+    "elapsed_seconds": 607.81,
+    "session_id": "V--u87gppNkOHZpZ1jtA8N9Fl2749roG",
+    "run_id": "run-V--u87gpq0DvD_20bX5M8ihaF-vcJ-VJ",
+    "oracle": {
+      "text": "墨斗 Browser 验收",
+      "clicks": 1,
+      "checked": true,
+      "color": "green",
+      "scroll": 2000
+    },
+    "prompt_workarounds": false,
+    "model": "ornith-1.5-35b",
+    "model_calls": 51,
+    "tool_calls": 63,
+    "actual_image_parts": [
+      {
+        "media_type": "image/png",
+        "bytes": 9685
+      },
+      {
+        "media_type": "image/png",
+        "bytes": 9930
+      }
+    ],
+    "known_final_response_issue": "Model included an invented base64 image in final prose; validation uses retained native tool image parts and independent page oracle, not that data URI."
   }
 }
