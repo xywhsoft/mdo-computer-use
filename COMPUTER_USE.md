@@ -266,6 +266,16 @@ python -m computer_use transport-check --scope browser-grant
 
 ## Local environment
 
+### Remaining acceptance — explicit Responses strictness
+
+The resumed work reproduces another generic host wire mismatch: a non-strict
+tool definition omits `strict` instead of sending `false`. Responses may try
+strict normalization when this field is omitted, unlike Chat Completions.
+An offline native regression checks that both boolean values and open argument
+maps survive serialization. This is a possible contributor to malformed batch
+arguments; a real model run is still required to establish that relationship.
+Reference: https://developers.openai.com/api/docs/guides/function-calling
+
 Python 3.12+ is sufficient for the integration commands. Build this checkout's
 Windows product with the locked SDK, without building Android/Linux products:
 

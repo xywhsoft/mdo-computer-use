@@ -4,6 +4,21 @@
 #include <xllm.h>
 
 static xllm_client* Client;
+static void EmitSchemas(void) {
+    xllm_request Request;xllm_tool Tool={0};xllm_error Error;xllm_message User;
+    xllmRequestInit(&Request);Request.bParallelToolCalls=false;
+    xllmMessageInit(&User,XLLM_ROLE_USER);xllmMessageSetContent(&User,"schema probe");
+    xllmRequestAddMessage(&Request,&User);xllmMessageUnit(&User);
+    Tool.sName="open_arguments";Tool.sDescription="Preserve an open argument map";
+    Tool.sParametersJson="{\"type\":\"object\",\"properties\":{\"args\":{\"type\":\"object\",\"additionalProperties\":true}}}";
+    Tool.bStrict=false;xllmRequestAddTool(&Request,Tool.sName,Tool.sDescription,Tool.sParametersJson,Tool.bStrict);
+    Tool.sName="closed_arguments";Tool.sDescription="Preserve explicit strict mode";
+    Tool.sParametersJson="{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}";
+    Tool.bStrict=true;xllmRequestAddTool(&Request,Tool.sName,Tool.sDescription,Tool.sParametersJson,Tool.bStrict);
+    char* Json=xllmClientBuildRequestJson(Client,&Request,&Error);
+    if(!Json){printf("schema_error=%s\n",Error.sMessage);exit(4);}
+    printf("schema_wire=%s\n",Json);xllmFree(Json);xllmRequestUnit(&Request);
+}
 static void Emit(const char* Name, int Mode) {
     xllm_request Request; xllm_message Tool; xllm_part Part; xllm_error Error;
     const unsigned char Image[] = {0x89, 0x50, 0x4e, 0x47};
@@ -51,6 +66,7 @@ void ServiceInit(XS_HostInfo* Host) {
     if (!Client) { printf("wire_init_error=%s\n", Error.sMessage); exit(3); }
     Emit("plain", 0); Emit("text", 1); Emit("mixed", 2);
     Emit("image", 3); Emit("texts", 4);
+    EmitSchemas();
     xllmClientDestroy(Client); fflush(stdout); exit(0);
 }
 void ServiceUnit(XS_HostInfo* Host) { (void)Host; }
