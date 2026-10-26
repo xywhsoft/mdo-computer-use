@@ -1,6 +1,7 @@
 # 运行数据：模型配置（含 API key）、会话账本、记忆、审计与回收站——永不入库
 data/
 mdo-home/
+/xs.json
 
 # 构建产物与二进制
 /mdo-linux-x86_64-glibc
